@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "org.bread_experts_group.breadmod_advanced.mixin",
+  "package": "org.bread_experts_group.breadmodadvanced.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
   ],
