@@ -3,7 +3,7 @@
     <!-- Appenders are done in breadmod.ModMain -->
     <Loggers>
         <Root level="INFO" additivity="false">
-            <AppenderRef ref="org.bread_experts_group.breadmodadvanced.ConsoleColorAppender"/>
+            <AppenderRef ref="org.bread_experts_group.breadmod_advanced.ConsoleColorAppender"/>
         </Root>
     </Loggers>
 </Configuration>

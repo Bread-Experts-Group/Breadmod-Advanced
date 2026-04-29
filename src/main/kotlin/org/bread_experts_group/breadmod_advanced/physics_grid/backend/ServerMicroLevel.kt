@@ -1,8 +1,8 @@
-package org.bread_experts_group.breadmodadvanced.physics_grid.backend
+package org.bread_experts_group.breadmod_advanced.physics_grid.backend
 
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.Level
-import org.bread_experts_group.breadmodadvanced.physics_grid.PhysicsGrid
+import org.bread_experts_group.breadmod_advanced.physics_grid.PhysicsGrid
 
 class ServerMicroLevel(
 	private val sourceLevel: Level,

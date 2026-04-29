@@ -1,10 +1,10 @@
-package org.bread_experts_group.breadmodadvanced.physics_grid
+package org.bread_experts_group.breadmod_advanced.physics_grid
 
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
-import org.bread_experts_group.breadmodadvanced.physics_grid.backend.ClientMicroLevel
-import org.bread_experts_group.breadmodadvanced.physics_grid.backend.ServerMicroLevel
+import org.bread_experts_group.breadmod_advanced.physics_grid.backend.ClientMicroLevel
+import org.bread_experts_group.breadmod_advanced.physics_grid.backend.ServerMicroLevel
 
 class PhysicsGrid(
 	val id: Long,

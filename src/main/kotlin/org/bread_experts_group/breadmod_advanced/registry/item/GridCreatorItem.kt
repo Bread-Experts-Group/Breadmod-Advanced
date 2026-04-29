@@ -1,4 +1,4 @@
-package org.bread_experts_group.breadmodadvanced.registry.item
+package org.bread_experts_group.breadmod_advanced.registry.item
 
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.player.LocalPlayer

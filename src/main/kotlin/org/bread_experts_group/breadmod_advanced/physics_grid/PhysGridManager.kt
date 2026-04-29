@@ -1,4 +1,4 @@
-package org.bread_experts_group.breadmodadvanced.physics_grid
+package org.bread_experts_group.breadmod_advanced.physics_grid
 
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.Level

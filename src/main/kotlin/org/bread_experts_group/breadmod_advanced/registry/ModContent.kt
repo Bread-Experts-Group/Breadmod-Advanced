@@ -1,4 +1,4 @@
-package org.bread_experts_group.breadmodadvanced.registry
+package org.bread_experts_group.breadmod_advanced.registry
 
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
@@ -6,8 +6,9 @@ import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.Item
 import net.neoforged.neoforge.registries.DeferredItem
 import org.bread_experts_group.breadmod.registry.RegistryProvider
-import org.bread_experts_group.breadmodadvanced.BreadModAdvanced
-import org.bread_experts_group.breadmodadvanced.registry.item.GridCreatorItem
+import org.bread_experts_group.breadmod_advanced.BreadModAdvanced
+import org.bread_experts_group.breadmod_advanced.registry.item.GridCreatorItem
+import org.bread_experts_group.breadmod_advanced.registry.item.PhysXToolItem
 import java.util.function.Supplier
 
 object ModContent : RegistryProvider(
@@ -30,6 +31,7 @@ object ModContent : RegistryProvider(
 	}
 
 	val GRID_CREATOR: DeferredItem<Item> = this.registerItem("grid_creator", ::GridCreatorItem)
+	val PHYSX_TOOL: DeferredItem<Item> = this.registerItem("physx_tool", ::PhysXToolItem)
 
 	val CREATIVE_TAB: Supplier<CreativeModeTab> = this.tabRegistry.register("breadmod_advanced") { ->
 		CreativeModeTab.builder()

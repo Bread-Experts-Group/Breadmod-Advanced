@@ -4,7 +4,7 @@ import net.neoforged.moddevgradle.dsl.RunModel
 import java.util.*
 
 plugins {
-	kotlin("jvm") version "2.3.0"
+	kotlin("jvm") version "2.3.21"
 	id("org.jetbrains.dokka-javadoc") version "2.1.0"
 	id("idea")
 	id("net.neoforged.moddev") version "2.0.134"
@@ -19,21 +19,17 @@ version = project.properties["mod_version"] as String
 private fun getModId(): String = project.properties["mod_id"] as String
 private fun RunModel.enableTestNamespaces(): Unit = systemProperty("neoforge.enabledGameTestNamespaces", getModId())
 private fun RunModel.addAgent(): Unit =
-	jvmArgument("-javaagent:${file("build/libs/breadmodadvanced-1.0.0.jar").absolutePath}")
+	jvmArgument("-javaagent:${file("build/libs/breadmod_advanced-1.0.0.jar").absolutePath}")
 private fun mcVersion(): String = project.properties["minecraft_version"] as String
-private val breadServerLib: String = "org.bread_experts_group:bread_server_lib-code:D1F4N6P1"
-private val breadMod: String = "org.bread_experts_group:breadmod:1.5.1"
+private val breadServerLib: String = "org.bread_experts_group:bread_server_lib-code:D1F6N8P0"
+private val breadMod: String = "org.bread_experts_group:breadmod:1.5.2"
 
-idea {
-	module {
-		isDownloadSources = true
-		isDownloadJavadoc = true
-	}
+idea.module {
+	isDownloadSources = true
+	isDownloadJavadoc = true
 }
 
-base {
-	archivesName = getModId()
-}
+base.archivesName = getModId()
 
 repositories {
 	mavenCentral()
@@ -87,7 +83,7 @@ neoForge {
 			gameDirectory.set(File("./run/client"))
 			enableTestNamespaces()
 			addAgent()
-			devLogin = true
+			devLogin = false
 		}
 		create("client_noLogin") {
 			client()
@@ -176,9 +172,6 @@ kotlin {
 		freeCompilerArgs.add("-Xcontext-parameters")
 	}
 }
-private val localProperties: Properties = Properties().apply {
-	rootProject.file("local.properties").reader().use(::load)
-}
 
 tasks.processResources {
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -215,7 +208,7 @@ neoForge.ideSyncTask(tasks["generateModMetadata"])
 tasks.jar {
 	manifest {
 		attributes(
-			"Premain-Class" to "org.bread_experts_group.breadmodadvanced.preload_agent.Agent"
+			"Premain-Class" to "org.bread_experts_group.breadmod_advanced.preload_agent.Agent"
 		)
 	}
 }
