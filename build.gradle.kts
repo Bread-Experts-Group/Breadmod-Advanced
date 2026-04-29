@@ -1,7 +1,6 @@
 @file:Suppress("ImplicitThis", "UnstableApiUsage")
 
 import net.neoforged.moddevgradle.dsl.RunModel
-import java.util.*
 
 plugins {
 	kotlin("jvm") version "2.3.21"
@@ -17,10 +16,13 @@ group = project.properties["mod_group_id"] as String
 version = project.properties["mod_version"] as String
 
 private fun getModId(): String = project.properties["mod_id"] as String
-private fun RunModel.enableTestNamespaces(): Unit = systemProperty("neoforge.enabledGameTestNamespaces", getModId())
-private fun RunModel.addAgent(): Unit =
-	jvmArgument("-javaagent:${file("build/libs/breadmod_advanced-1.0.0.jar").absolutePath}")
 private fun mcVersion(): String = project.properties["minecraft_version"] as String
+private fun RunModel.enableTestNamespaces(): Unit = systemProperty(
+	"neoforge.enabledGameTestNamespaces", getModId()
+)
+private fun RunModel.addAgent(): Unit = jvmArgument(
+	"-javaagent:${file("build/libs/breadmod_advanced-1.0.0.jar").absolutePath}"
+)
 private val breadServerLib: String = "org.bread_experts_group:bread_server_lib-code:D1F6N8P0"
 private val breadMod: String = "org.bread_experts_group:breadmod:1.5.2"
 
@@ -59,10 +61,10 @@ repositories {
 		name = "ForgeConfigAPIPort"
 		url = uri("https://raw.githubusercontent.com/Fuzss/modresources/main/maven/")
 	}
-	maven {
-		name = "Bread Experts Group Maven"
-		url = uri("https://maven.breadexperts.group/")
-	}
+//	maven {
+//		name = "Bread Experts Group Maven"
+//		url = uri("https://maven.breadexperts.group/")
+//	}
 }
 
 neoForge {
@@ -83,11 +85,11 @@ neoForge {
 			gameDirectory.set(File("./run/client"))
 			enableTestNamespaces()
 			addAgent()
-			devLogin = false
+			devLogin = true
 		}
-		create("client_noLogin") {
+		create("clientNoDevLogin") {
 			client()
-			gameDirectory.set(File("./run/client_no_login"))
+			gameDirectory.set(File("./run/client"))
 			enableTestNamespaces()
 			addAgent()
 		}
@@ -98,16 +100,16 @@ neoForge {
 			enableTestNamespaces()
 			addAgent()
 		}
-		create("server_noOnline") {
-			server()
-			gameDirectory.set(File("./run/server_no_online"))
-			enableTestNamespaces()
-			addAgent()
-		}
-		create("gameTestServer") {
-			type = "gameTestServer"
-			enableTestNamespaces()
-		}
+//		create("server_noOnline") {
+//			server()
+//			gameDirectory.set(File("./run/server"))
+//			enableTestNamespaces()
+//			addAgent()
+//		}
+//		create("gameTestServer") {
+//			type = "gameTestServer"
+//			enableTestNamespaces()
+//		}
 		create("data") {
 			data()
 			gameDirectory.set(File("./run/data"))
@@ -119,11 +121,6 @@ neoForge {
 			)
 		}
 		configureEach {
-			// Logging data for a UserDev environment
-			// "SCAN": For mods scan.
-			// "REGISTRIES": For firing of registry events.
-			// "REGISTRYDUMP": For getting the contents of all registries.
-			// systemProperty 'forge.logging.markers', 'REGISTRIES'
 			logLevel = org.slf4j.event.Level.INFO
 			additionalRuntimeClasspathConfiguration.dependencies.add(
 				dependencies.create(breadServerLib) { isTransitive = false }
@@ -147,10 +144,7 @@ dependencies {
 //	jarJar(implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.3.0") {})
 //	jarJar(implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.3.0") {})
 	// Mod Compatibility //
-	// Jade (WAILA)
 	implementation("curse.maven:jade-324717:5976517")
-//    runtimeOnly "curse.maven:the-one-probe-245211:5836106"
-	runtimeOnly("curse.maven:packet-fixer-689467:6195911")
 	implementation("curse.maven:projecte-226410:6611984")
 	// Just Enough Items (JEI)
 	val jeiVersion = "19.21.2.313"
