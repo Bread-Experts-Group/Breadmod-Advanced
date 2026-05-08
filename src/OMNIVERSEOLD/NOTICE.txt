@@ -1,0 +1,5 @@
+This folder contains code for ovphysx integration.
+
+ovphysx is not very stable in testing, so we switched over to PhysX by itself.
+
+https://github.com/NVIDIA-Omniverse/PhysX/tree/main/ovphysx

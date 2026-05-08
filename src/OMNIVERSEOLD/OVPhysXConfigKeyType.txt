@@ -1,0 +1,24 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+
+/** Config key type discriminator — selects which key/value union members are valid. */
+enum class OVPhysXConfigKeyType {
+	/** Key from ovphysx_config_bool_t, value is bool */
+	OVPHYSX_CONFIG_KEY_TYPE_BOOL,
+
+	/** Key from ovphysx_config_int32_t, value is int32_t */
+	OVPHYSX_CONFIG_KEY_TYPE_INT32,
+
+	/** Key from ovphysx_config_float_t, value is float */
+	OVPHYSX_CONFIG_KEY_TYPE_FLOAT,
+
+	/** Key from ovphysx_config_string_t, value is ovphysx_string_t */
+	OVPHYSX_CONFIG_KEY_TYPE_STRING,
+
+	/** Escape hatch: arbitrary Carbonite path (string key + string value) */
+	OVPHYSX_CONFIG_KEY_TYPE_CARBONITE,
+	OVPHYSX_CONFIG_KEY_TYPE_COUNT
+}
+
+val ovphysx_config_key_type_t = int

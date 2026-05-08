@@ -1,0 +1,10 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+
+/** Float config keys (reserved for future use). Value type: float. */
+enum class OVPhysXConfigFloat {
+	OVPHYSX_CONFIG_FLOAT_COUNT
+}
+
+val ovphysx_config_float_t = int

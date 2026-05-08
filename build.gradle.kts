@@ -17,14 +17,10 @@ version = project.properties["mod_version"] as String
 
 private fun getModId(): String = project.properties["mod_id"] as String
 private fun mcVersion(): String = project.properties["minecraft_version"] as String
-private fun RunModel.enableTestNamespaces(): Unit = systemProperty(
-	"neoforge.enabledGameTestNamespaces", getModId()
-)
-private fun RunModel.addAgent(): Unit = jvmArgument(
-	"-javaagent:${file("build/libs/breadmod_advanced-1.0.0.jar").absolutePath}"
-)
-private val breadServerLib: String = "org.bread_experts_group:bread_server_lib-code:D1F6N8P0"
-private val breadMod: String = "org.bread_experts_group:breadmod:1.5.2"
+
+private val breadServerLib: String = "org.bread_experts_group:bread_server_lib-code:D1F6N8P3"
+private val breadMod: String = "org.bread_experts_group:breadmod:1.6.1"
+private val upwards: String = "org.bread_experts_group:upwards:4"
 
 idea.module {
 	isDownloadSources = true
@@ -80,36 +76,27 @@ neoForge {
 	}
 
 	runs {
+		fun RunModel.enableTestNamespaces(): Unit = systemProperty(
+			"neoforge.enabledGameTestNamespaces", getModId()
+		)
+
 		create("client") {
 			client()
 			gameDirectory.set(File("./run/client"))
 			enableTestNamespaces()
-			addAgent()
 			devLogin = true
 		}
 		create("clientNoDevLogin") {
 			client()
 			gameDirectory.set(File("./run/client"))
 			enableTestNamespaces()
-			addAgent()
 		}
 		create("server") {
 			server()
 			programArgument("--nogui")
 			gameDirectory.set(File("./run/server"))
 			enableTestNamespaces()
-			addAgent()
 		}
-//		create("server_noOnline") {
-//			server()
-//			gameDirectory.set(File("./run/server"))
-//			enableTestNamespaces()
-//			addAgent()
-//		}
-//		create("gameTestServer") {
-//			type = "gameTestServer"
-//			enableTestNamespaces()
-//		}
 		create("data") {
 			data()
 			gameDirectory.set(File("./run/data"))
@@ -121,6 +108,12 @@ neoForge {
 			)
 		}
 		configureEach {
+			this.jvmArguments.addAll(
+				"-javaagent:${file("build/libs/breadmod_advanced-1.0.0.jar").absolutePath}",
+				"--enable-native-access=ALL-UNNAMED", // Restricted use: BSL and associates
+				"--illegal-native-access=allow" // Restricted use: all other libraries
+			)
+
 			logLevel = org.slf4j.event.Level.INFO
 			additionalRuntimeClasspathConfiguration.dependencies.add(
 				dependencies.create(breadServerLib) { isTransitive = false }
@@ -135,14 +128,17 @@ neoForge {
 	}
 }
 
+private val upwardsLibraries: Configuration by configurations.creating
+
+configurations {
+	implementation.get().extendsFrom(upwardsLibraries)
+}
+
 dependencies {
 	// Mod Dependencies //
-	jarJar(implementation(breadServerLib) {})
+	upwardsLibraries(implementation(breadServerLib) { isTransitive = false })
+	implementation(upwards)
 	implementation(breadMod)
-//	jarJar(implementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.0") {})
-//	jarJar(implementation("org.jetbrains.kotlin:kotlin-reflect:2.3.0") {})
-//	jarJar(implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.3.0") {})
-//	jarJar(implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.3.0") {})
 	// Mod Compatibility //
 	implementation("curse.maven:jade-324717:5976517")
 	implementation("curse.maven:projecte-226410:6611984")
@@ -178,7 +174,6 @@ tasks.named<ProcessResources>("generateModMetadata") {
 		"minecraft_version_range" to "${project.properties["minecraft_version_range"]}",
 		"neo_version" to "${project.properties["neo_version"]}",
 		"neo_version_range" to "${project.properties["neo_version_range"]}",
-		"loader_version_range" to "${project.properties["loader_version_range"]}",
 		"mod_id" to "${project.properties["mod_id"]}",
 		"mod_name" to "${project.properties["mod_name"]}",
 		"mod_license" to "${project.properties["mod_license"]}",
@@ -197,8 +192,6 @@ sourceSets.main.get().resources {
 	srcDirs("src/generated/resources", tasks["generateModMetadata"])
 }
 
-neoForge.ideSyncTask(tasks["generateModMetadata"])
-
 tasks.jar {
 	manifest {
 		attributes(
@@ -206,3 +199,11 @@ tasks.jar {
 		)
 	}
 }
+
+neoForge.ideSyncTask(
+	tasks.register<Copy>("pullUpwardsLibraries") {
+		dependsOn(tasks["generateModMetadata"])
+		delete("./src/main/resources/libs")
+		from(upwardsLibraries).into("./src/main/resources/libs")
+	}
+)

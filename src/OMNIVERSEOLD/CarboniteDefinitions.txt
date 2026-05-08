@@ -1,0 +1,43 @@
+@file:Suppress("DANGEROUS_CHARACTERS")
+
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.bool
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.char
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.ptr
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.size_t
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.uint32_t
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.`void*`
+import java.lang.foreign.AddressLayout
+import java.lang.foreign.MemoryLayout
+import java.lang.foreign.MemoryLayout.PathElement.groupElement
+import java.lang.foreign.StructLayout
+import java.lang.invoke.VarHandle
+
+val Framework: AddressLayout = `void*`
+
+val Version: StructLayout = MemoryLayout.structLayout(
+	uint32_t.withName("major"),
+	uint32_t.withName("minor")
+)
+val `Version major`: VarHandle = Version.varHandle(groupElement("major"))
+val `Version minor`: VarHandle = Version.varHandle(groupElement("minor"))
+
+val PluginLoadingDesc: StructLayout = MemoryLayout.structLayout(
+	char.ptr.ptr.withName("searchPaths"),
+	size_t.withName("searchPathCount"),
+	MemoryLayout.paddingLayout(7), // TODO: FIX MANUAL ALIGN
+	bool.withName("searchRecursive"),
+	char.ptr.withName("loadedFileWildcards"),
+	size_t.withName("loadedFileWildcardCount"),
+	char.ptr.withName("reloadableFileWildcards"),
+	size_t.withName("reloadableFileWildcardCount"),
+	MemoryLayout.paddingLayout(7), // TODO: FIX MANUAL ALIGN
+	bool.withName("unloadPlugins"),
+	char.ptr.withName("excludedFileWildcards"),
+	size_t.withName("excludedFileWildcardCount"),
+)
+val `PluginLoadingDesc searchPaths`: VarHandle = PluginLoadingDesc.varHandle(groupElement("searchPaths"))
+val `PluginLoadingDesc searchPathCount`: VarHandle = PluginLoadingDesc.varHandle(groupElement("searchPathCount"))
+val `PluginLoadingDesc loadedFileWildcards`: VarHandle = PluginLoadingDesc.varHandle(groupElement("loadedFileWildcards"))
+val `PluginLoadingDesc loadedFileWildcardCount`: VarHandle = PluginLoadingDesc.varHandle(groupElement("loadedFileWildcardCount"))

@@ -1,0 +1,22 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+import java.lang.foreign.ValueLayout
+
+enum class OVPhysXType(val id: Int) {
+	OVPHYSX_PHYSX_TYPE_SCENE(1),
+	OVPHYSX_PHYSX_TYPE_MATERIAL(2),
+	OVPHYSX_PHYSX_TYPE_SHAPE(3),
+	OVPHYSX_PHYSX_TYPE_COMPOUND_SHAPE(4),
+	OVPHYSX_PHYSX_TYPE_ACTOR(5),
+	OVPHYSX_PHYSX_TYPE_JOINT(6),
+	OVPHYSX_PHYSX_TYPE_CUSTOM_JOINT(7),
+	OVPHYSX_PHYSX_TYPE_ARTICULATION(8),
+	OVPHYSX_PHYSX_TYPE_LINK(9),
+	OVPHYSX_PHYSX_TYPE_LINK_JOINT(10),
+	OVPHYSX_PHYSX_TYPE_PARTICLE_SYSTEM(11),
+	OVPHYSX_PHYSX_TYPE_PARTICLE_SET(12),
+	OVPHYSX_PHYSX_TYPE_PHYSICS(31)
+}
+
+val ovphysx_physx_type_t: ValueLayout = int

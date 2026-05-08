@@ -1,0 +1,15 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+
+/** Int32 config keys. Value type: int32_t. */
+enum class OVPhysXConfigInt32 {
+	/** /physics/numThreads */
+	OVPHYSX_CONFIG_NUM_THREADS,
+
+	/** /physics/sceneMultiGPUMode (0=disabled, 1=all, 2=skip-first) */
+	OVPHYSX_CONFIG_SCENE_MULTI_GPU_MODE,
+	OVPHYSX_CONFIG_INT32_COUNT
+}
+
+val ovphysx_config_int32_t = int

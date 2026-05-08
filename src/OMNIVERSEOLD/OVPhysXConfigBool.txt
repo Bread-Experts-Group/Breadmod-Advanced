@@ -1,0 +1,17 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+
+enum class OVPhysXConfigBool {
+	/** /physics/disableContactProcessing */
+	OVPHYSX_CONFIG_DISABLE_CONTACT_PROCESSING,
+
+	/** /physics/collisionConeCustomGeometry */
+	OVPHYSX_CONFIG_COLLISION_CONE_CUSTOM_GEOMETRY,
+
+	/** /physics/collisionCylinderCustomGeometry */
+	OVPHYSX_CONFIG_COLLISION_CYLINDER_CUSTOM_GEOMETRY,
+	OVPHYSX_CONFIG_BOOL_COUNT
+}
+
+val ovphysx_config_bool_t = int

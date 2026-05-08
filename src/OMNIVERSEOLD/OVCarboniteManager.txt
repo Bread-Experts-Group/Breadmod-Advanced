@@ -1,0 +1,266 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.api.system.device.SystemDevice
+import org.bread_experts_group.api.system.device.SystemDeviceFeatures
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.ptr
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.uint32_t
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.uint64_t
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.`void*`
+import org.bread_experts_group.breadmod_advanced.registry.item.WindowsLoading.k32_getProcAddress
+import org.bread_experts_group.breadmod_advanced.registry.item.WindowsLoading.k32_loadLibraryExW
+import org.bread_experts_group.ffi.autoArena
+import org.bread_experts_group.ffi.getDowncall
+import org.bread_experts_group.ffi.getDowncallVoid
+import org.bread_experts_group.ffi.nativeLinker
+import org.bread_experts_group.ffi.windows.char
+import org.bread_experts_group.ffi.windows.float
+import java.lang.foreign.MemorySegment
+
+class OVCarboniteManager(
+	val nativeLibraryPath: SystemDevice,
+	appName: String,
+	carboniteMajor: Int = 0,
+	carboniteMinor: Int = 8
+) {
+	val carbonite: MemorySegment
+	val carb_acquireFramework: (appName: String, carboniteMajor: Int, carboniteMinor: Int) -> MemorySegment
+
+	val carboniteFramework: MemorySegment
+	val carb_frame_loadPlugins: (PluginLoadingDesc) -> Unit
+
+	data class PluginLoadingDesc(
+		val searchPaths: Array<String> = arrayOf(""),
+		val searchRecursive: Boolean = false,
+		val loadedFileWildcards: Array<String> = arrayOf("*.plugin"),
+		val reloadableFileWildcards: Array<String> = emptyArray(),
+		val unloadPlugins: Boolean = false,
+		val excludedFileWildcards: Array<String> = emptyArray(),
+	)
+
+	init {
+		carbonite = k32_loadLibraryExW(
+			nativeLibraryPath
+				.get(SystemDeviceFeatures.PATH_APPEND).append("carb.dll")
+				.get(SystemDeviceFeatures.PATH).element,
+			0x1100
+		)
+
+		val carbAc = k32_getProcAddress(carbonite, "acquireFramework").getDowncall(
+			nativeLinker, Framework.ptr,
+			char.ptr.withName("appName"),
+			uint64_t.withName("frameworkVersion")
+		)
+		carb_acquireFramework = { appName, major, minor ->
+			val version = autoArena.allocate(Version)
+			`Version major`.set(version, 0L, major)
+			`Version minor`.set(version, 0L, minor)
+			val framework = carbAc.invokeExact(
+				autoArena.allocateFrom(appName, Charsets.UTF_8),
+				version.get(uint64_t, 0)
+			) as MemorySegment
+			if (framework == MemorySegment.NULL) throw InternalError("Carbonite acquisition failed")
+			framework
+		}
+		carboniteFramework = carb_acquireFramework(appName, carboniteMajor, carboniteMinor)
+		val cfLp = carboniteFramework
+			.reinterpret(`void*`.byteSize())
+			.get(`void*`, 0)
+			.getDowncallVoid(
+				nativeLinker,
+				PluginLoadingDesc.ptr.withName("desc")
+			)
+		carb_frame_loadPlugins = {
+			val desc = autoArena.allocate(PluginLoadingDesc)
+			if (it.searchPaths.isNotEmpty()) {
+				val paths = autoArena.allocate(char.ptr, it.searchPaths.size.toLong())
+				it.searchPaths.forEachIndexed { index, string ->
+					paths.setAtIndex(
+						char.ptr, index.toLong(),
+						autoArena.allocateFrom(string, Charsets.UTF_8)
+					)
+				}
+				`PluginLoadingDesc searchPaths`.set(desc, 0, paths)
+				`PluginLoadingDesc searchPathCount`.set(desc, 0, it.searchPaths.size)
+			}
+			if (it.loadedFileWildcards.isNotEmpty()) {
+				val paths = autoArena.allocate(char.ptr, it.loadedFileWildcards.size.toLong())
+				it.loadedFileWildcards.forEachIndexed { index, string ->
+					paths.setAtIndex(
+						char.ptr, index.toLong(),
+						autoArena.allocateFrom(string, Charsets.UTF_8)
+					)
+				}
+				`PluginLoadingDesc loadedFileWildcards`.set(desc, 0, paths)
+				`PluginLoadingDesc loadedFileWildcardCount`.set(desc, 0, it.loadedFileWildcards.size)
+			}
+			cfLp(desc)
+		}
+	}
+
+	data class EnqueueStatus(
+		val status: OVPhysXAPIStatus,
+		val opIndex: Long
+	) {
+		constructor(segment: MemorySegment) : this(
+			OVPhysXAPIStatus.entries[`ovphysx_enqueue_result_t status`.get(segment, 0) as Int],
+			`ovphysx_enqueue_result_t op_index`.get(segment, 0) as Long
+		)
+	}
+
+	data class AddUSDResult(
+		val usdHandle: Long?,
+		val status: EnqueueStatus
+	)
+
+	data class WaitResult(
+		val failedOps: LongArray,
+		val lowestPendingOp: Long
+	)
+
+	data class WaitOpResult(
+		val status: OVPhysXAPIStatus,
+		val result: WaitResult
+	)
+
+	inner class PhysXInstance(
+		args: MemorySegment,
+		logLevel: Int? = null
+	) {
+		val physx: MemorySegment
+		val physx_setLogLevel: (level: Int) -> OVPhysXAPIStatus
+		val physx_createInstance: (args: MemorySegment) -> Pair<Long?, OVPhysXAPIStatus>
+		val physx_addUsd: (usdFilePath: String, pathPrefix: String) -> AddUSDResult
+		val physx_waitOp: (opIndex: Long, timeout: Long) -> WaitOpResult
+		val physx_stepSync: (stepDt: Float, currentTime: Float) -> OVPhysXAPIStatus
+		val physx_getPhysXPtr: (primPath: String, physxType: Int) -> Pair<MemorySegment?, OVPhysXAPIStatus>
+		val physx_getLastError: () -> String
+
+		val instance: Long
+
+		init {
+			physx = k32_loadLibraryExW(
+				nativeLibraryPath
+					.get(SystemDeviceFeatures.PATH_APPEND).append("ovphysx.dll")
+					.get(SystemDeviceFeatures.PATH).element,
+				0x1100
+			)
+			val sll = k32_getProcAddress(physx, "ovphysx_set_log_level").getDowncall(
+				nativeLinker, ovphysx_api_status_t, // TODO: Really a struct
+				uint32_t.withName("level")
+			)
+			physx_setLogLevel = { level ->
+				val status = sll.invokeExact(level) as Int
+				OVPhysXAPIStatus.entries[status]
+			}
+			if (logLevel != null) physx_setLogLevel(logLevel)
+			val oci = k32_getProcAddress(physx, "ovphysx_create_instance").getDowncall(
+				nativeLinker, ovphysx_api_status_t, // TODO: Really a struct
+				ovphysx_create_args.ptr.withName("create_args"),
+				ovphysx_handle_t.ptr.withName("out_handle")
+			)
+			physx_createInstance = { args ->
+				val handle = autoArena.allocate(ovphysx_handle_t.ptr)
+				val status = oci.invokeExact(args, handle) as Int
+				val ptr = handle.get(ovphysx_handle_t, 0)
+				val statusE = OVPhysXAPIStatus.entries.get(status)
+				if (statusE != OVPhysXAPIStatus.OVPHYSX_API_SUCCESS) null to statusE
+				else ptr to statusE
+			}
+			val (handle, status) = physx_createInstance(args)
+			if (handle == null) throw InternalError("PhysX creation failed: $status")
+			instance = handle
+			val au = k32_getProcAddress(physx, "ovphysx_add_usd").getDowncallVoid(
+				nativeLinker, ovphysx_enqueue_result_t.ptr,
+				ovphysx_handle_t.withName("handle"),
+				ovphysx_string_t.ptr.withName("usd_file_path"),
+				ovphysx_string_t.ptr.withName("path_prefix"),
+				ovphysx_usd_handle_t.ptr.withName("out_usd_handle")
+			)
+			physx_addUsd = { filePath, prefix ->
+				val result = autoArena.allocate(ovphysx_enqueue_result_t)
+				val usdFp = autoArena.allocate(ovphysx_string_t)
+				if (filePath.isNotEmpty()) {
+					val aPtr = autoArena.allocateFrom(filePath, Charsets.UTF_8)
+					`ovphysx_string_t ptr`.set(usdFp, 0, aPtr)
+					`ovphysx_string_t length`.set(usdFp, 0, aPtr.byteSize())
+				}
+				val pp = autoArena.allocate(ovphysx_string_t)
+				if (prefix.isNotEmpty()) {
+					val aPtr = autoArena.allocateFrom(prefix, Charsets.UTF_8)
+					`ovphysx_string_t ptr`.set(pp, 0, aPtr)
+					`ovphysx_string_t length`.set(pp, 0, aPtr.byteSize())
+				}
+				val out = autoArena.allocate(ovphysx_usd_handle_t)
+				au.invokeExact(result, instance, usdFp, pp, out)
+				AddUSDResult(
+					out.get(ovphysx_usd_handle_t, 0),
+					EnqueueStatus(result)
+				)
+			}
+			val wo = k32_getProcAddress(physx, "ovphysx_wait_op").getDowncall(
+				nativeLinker, ovphysx_api_status_t, // TODO: Really a struct
+				ovphysx_handle_t.withName("handle"),
+				ovphysx_op_index_t.withName("op_index"),
+				uint64_t.withName("timeout_ns"),
+				ovphysx_op_wait_result_t.ptr.withName("out_wait_result")
+			)
+			physx_waitOp = { index, timeout ->
+				val result = autoArena.allocate(ovphysx_op_wait_result_t)
+				val status = wo.invokeExact(instance, index, timeout, result) as Int
+				val arraySize = `ovphysx_op_wait_result_t num_errors`.get(result, 0) as Long
+				val array = (`ovphysx_op_wait_result_t error_op_indices`.get(result, 0) as MemorySegment)
+					.reinterpret(arraySize * ovphysx_op_index_t.byteSize())
+				WaitOpResult(
+					OVPhysXAPIStatus.entries[status],
+					OVCarboniteManager.WaitResult(
+						LongArray(arraySize.toInt()) {
+							array.get(ovphysx_op_index_t, it * ovphysx_op_index_t.byteSize())
+						},
+						`ovphysx_op_wait_result_t lowest_pending_op_index`.get(result, 0) as Long
+					)
+				)
+			}
+			val ss = k32_getProcAddress(physx, "ovphysx_step_sync").getDowncall(
+				nativeLinker, ovphysx_api_status_t, // TODO: Really a struct
+				ovphysx_handle_t.withName("handle"),
+				float.withName("step_dt"),
+				float.withName("current_time")
+			)
+			physx_stepSync = { stepDt, currentTime ->
+				val status = ss.invokeExact(instance, stepDt, currentTime) as Int
+				OVPhysXAPIStatus.entries[status]
+			}
+			val gpp = k32_getProcAddress(physx, "ovphysx_get_physx_ptr").getDowncall(
+				nativeLinker, ovphysx_api_status_t, // TODO: Really a struct
+				ovphysx_handle_t.withName("handle"),
+				char.ptr.withName("prim_path"),
+				ovphysx_physx_type_t.withName("physx_type"),
+				`void*`.ptr.withName("out_ptr")
+			)
+			physx_getPhysXPtr = { path, type ->
+				val out = autoArena.allocate(`void*`.ptr)
+				val path = autoArena.allocateFrom(path, Charsets.UTF_8)
+				val status = gpp.invokeExact(instance, path, type, out) as Int
+				if (status != 0) null to OVPhysXAPIStatus.entries[status]
+				else out.get(`void*`, 0) to OVPhysXAPIStatus.OVPHYSX_API_SUCCESS
+			}
+			val gle = k32_getProcAddress(physx, "ovphysx_get_last_error").getDowncallVoid(
+				nativeLinker, ovphysx_string_t.ptr, // TODO: really a struct
+			)
+			physx_getLastError = {
+				val store = autoArena.allocate(ovphysx_string_t)
+				gle.invokeExact(store)
+				val safe = autoArena.allocate((`ovphysx_string_t length`.get(store, 0) as Long) + 1)
+				val string = (`ovphysx_string_t ptr`.get(store, 0) as MemorySegment).reinterpret(
+					safe.byteSize() - 1
+				)
+				MemorySegment.copy(
+					string, 0,
+					safe, 0,
+					safe.byteSize() - 1
+				)
+				safe.getString(0, Charsets.UTF_8)
+			}
+		}
+	}
+}

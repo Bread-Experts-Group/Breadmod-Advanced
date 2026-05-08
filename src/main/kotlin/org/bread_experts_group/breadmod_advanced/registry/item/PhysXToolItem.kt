@@ -5,49 +5,69 @@ import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.context.UseOnContext
-import org.bread_experts_group.api.system.SystemFeatures
-import org.bread_experts_group.api.system.SystemProvider
+import org.apache.logging.log4j.LogManager
 import org.bread_experts_group.api.system.device.SystemDeviceFeatures
-import org.bread_experts_group.api.system.io.IODevice
-import org.bread_experts_group.api.system.io.IODeviceFeatures
-import org.bread_experts_group.api.system.io.open.FileIOOpenFeatures
-import org.bread_experts_group.api.system.io.open.FileIOReOpenFeatures
-import org.bread_experts_group.api.system.io.open.StandardIOOpenFeatures
-import org.bread_experts_group.breadmod.BreadMod
 import org.bread_experts_group.breadmod.registry.item.IMouseItem
-import org.bread_experts_group.breadmod_advanced.BreadModAdvanced
-import org.bread_experts_group.breadmod_advanced.println
+import org.bread_experts_group.breadmod_advanced.system_native.*
+import org.bread_experts_group.breadmod_advanced.system_native.PxPhysicsVersion.PX_PHYSICS_VERSION
 import org.bread_experts_group.ffi.getLookup
-import org.bread_experts_group.generic.io.reader.BSLWriter
-import java.lang.foreign.Arena
-import kotlin.io.path.Path
+import org.bread_experts_group.ffi.globalArena
+import org.bread_experts_group.ffi.nativeLinker
+import org.bread_experts_group.generic.FlagSet
 
 class PhysXToolItem : Item(Properties().stacksTo(1).rarity(Rarity.UNCOMMON)), IMouseItem {
+	var ok = false
 	override fun onItemUseFirst(stack: ItemStack, context: UseOnContext): InteractionResult {
-		val file = "libs/ovphysx.dll"
-		val dll = PhysXToolItem::class.java.classLoader.getResourceAsStream(file)!!
-		val dllDisk = Path(BreadMod.ID).resolve(BreadModAdvanced.ID).resolve(file)
-		val pathDevice = SystemProvider.get(SystemFeatures.GET_CURRENT_WORKING_PATH_DEVICE).device
-			.get(SystemDeviceFeatures.PATH_APPEND).append(BreadMod.ID)
-			.get(SystemDeviceFeatures.PATH_APPEND).append(BreadModAdvanced.ID)
-			.get(SystemDeviceFeatures.PATH_APPEND).append(file)
-		val ioDeviceStatus = pathDevice.get(SystemDeviceFeatures.IO_DEVICE).open(
-			StandardIOOpenFeatures.CREATE, FileIOOpenFeatures.TRUNCATE,
-			FileIOReOpenFeatures.WRITE
+		if (ok) return InteractionResult.PASS
+		ok = true
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXGpu_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PVDRuntime_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXCommon_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXCooking_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+
+		val foundationLibrary = PhysXFoundationLibrary(
+			globalArena.getLookup(
+				Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXFoundation_64.dll")
+					.get(SystemDeviceFeatures.PATH).element
+			)!!,
+			nativeLinker
 		)
-		val ioDevice = ioDeviceStatus.firstNotNullOfOrNull { it as? IODevice }
-		if (ioDevice == null) {
-			println("Couldn't download the DLL. Status: $ioDeviceStatus")
-			return InteractionResult.FAIL
-		}
-		val writer = BSLWriter(ioDevice.get(IODeviceFeatures.WRITE))
-		while (true) {
-			val byte = dll.read()
-			if (byte == -1) break
-			writer.write8i(byte)
-		}
-		writer.flush()
-		println(Arena.ofAuto().getLookup(dllDisk.toString()))
-		return super.onItemUseFirst(stack, context)
+		val physxLibrary = PhysXLibrary(
+			globalArena.getLookup(
+				Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysX_64.dll")
+					.get(SystemDeviceFeatures.PATH).element
+			)!!,
+			nativeLinker
+		)
+		val foundation = foundationLibrary.pxCreateFoundation(
+			nativeLinker, globalArena,
+			PX_PHYSICS_VERSION, PhysXAllocatorCallback.Standard,
+			PhysXErrorCallback.Standard(LogManager.getLogger("PhysX"))
+		)!!
+		val pvd = physxLibrary.pxCreatePvd(foundation)
+//		val transport = physxLibrary.pxDefaultPvdFileTransportCreate(globalArena, "TEST.pvd")
+		val transport = physxLibrary.pxDefaultPvdSocketTransportCreate(globalArena, "127.0.0.1", 5425, 10u)
+		println(pvd.connect(globalArena, transport, FlagSet.of(*PxPvdInstrumentationFlag.entries.toTypedArray())))
+		val physics = physxLibrary.pxCreatePhysics(
+			globalArena,
+			PX_PHYSICS_VERSION, foundation, PhysXTolerancesScale(), true, pvd
+		)!!
+		println(physics)
+		Thread.sleep(10000)
+		physics.release()
+		foundation.release()
+		return InteractionResult.SUCCESS
 	}
 }

@@ -1,0 +1,10 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+
+/** String config keys (reserved for future use). Value type: ovphysx_string_t. */
+enum class OVPhysXConfigString {
+	OVPHYSX_CONFIG_STRING_COUNT
+}
+
+val ovphysx_config_string_t = int

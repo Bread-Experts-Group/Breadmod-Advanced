@@ -1,0 +1,165 @@
+@file:Suppress("DANGEROUS_CHARACTERS", "LocalVariableName")
+
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.bool
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.char
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.float
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int32_t
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.ptr
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.size_t
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.uint32_t
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.uint64_t
+import org.bread_experts_group.ffi.autoArena
+import org.bread_experts_group.ffi.nativeLinker
+import java.lang.foreign.*
+import java.lang.foreign.MemoryLayout.PathElement.groupElement
+import java.lang.invoke.MethodHandle
+import java.lang.invoke.VarHandle
+
+object CanonicalLayouts {
+	val bool: ValueLayout
+	val char: ValueLayout
+	val short: ValueLayout
+	val int: ValueLayout
+	val long: ValueLayout
+	val `long long`: ValueLayout
+	val float: ValueLayout
+	val double: ValueLayout
+	val size_t: ValueLayout
+	val wchar_t: ValueLayout
+	val `void*`: AddressLayout
+
+	val int32_t: ValueLayout.OfInt
+	val uint32_t: ValueLayout.OfInt
+
+	val int64_t: ValueLayout.OfLong
+	val uint64_t: ValueLayout.OfLong
+
+	@Suppress("UnusedReceiverParameter")
+	val Any.ptr: AddressLayout
+		get() = `void*`
+
+	init {
+		val layouts = nativeLinker.canonicalLayouts()
+		this.`void*` = layouts["void*"]!! as AddressLayout
+		this.bool = layouts["bool"]!! as ValueLayout
+		this.char = layouts["char"]!! as ValueLayout
+		this.short = layouts["short"]!! as ValueLayout
+		this.int = layouts["int"]!! as ValueLayout
+		this.long = layouts["long"]!! as ValueLayout
+		this.`long long` = layouts["long long"]!! as ValueLayout
+		this.float = layouts["float"]!! as ValueLayout
+		this.double = layouts["double"]!! as ValueLayout
+		this.size_t = layouts["size_t"]!! as ValueLayout
+		this.wchar_t = layouts["wchar_t"]!! as ValueLayout
+
+		if (this.int is ValueLayout.OfInt) this.int32_t = this.int
+		else if (this.long is ValueLayout.OfInt) this.int32_t = this.long
+		else throw IllegalStateException("No suitable C types for int32.")
+		this.uint32_t = this.int32_t
+
+		if (this.int is ValueLayout.OfLong) this.int64_t = this.int
+		else if (this.long is ValueLayout.OfLong) this.int64_t = this.long
+		else if (this.`long long` is ValueLayout.OfLong) this.int64_t = this.`long long`
+		else throw IllegalStateException("No suitable C types for int64.")
+		this.uint64_t = this.int64_t
+	}
+}
+
+val ovphysx_string_t: StructLayout = MemoryLayout.structLayout(
+	char.ptr.withName("ptr").withByteAlignment(1),
+	size_t.withName("length").withByteAlignment(1)
+).withByteAlignment(8).withName("ovphysx_string_t")
+
+val `ovphysx_string_t ptr`: VarHandle = ovphysx_string_t.varHandle(groupElement("ptr"))
+val `ovphysx_string_t length`: VarHandle = ovphysx_string_t.varHandle(groupElement("length"))
+
+val ovphysx_config_entry_t: StructLayout = MemoryLayout.structLayout(
+	MemoryLayout.paddingLayout(4),  // TODO: FIX MANUAL ALIGN
+	ovphysx_config_key_type_t.withName("key_type"),
+	MemoryLayout.unionLayout(
+		ovphysx_config_bool_t.withName("bool_key"),
+		ovphysx_config_int32_t.withName("int32_key"),
+		ovphysx_config_float_t.withName("float_key"),
+		ovphysx_config_string_t.withName("string_key"),
+		ovphysx_string_t.withName("carbonite_key")
+	).withName("key"),
+	MemoryLayout.unionLayout(
+		bool.withName("bool_value"),
+		int32_t.withName("int32_value"),
+		float.withName("float_value"),
+		ovphysx_string_t.withName("string_value")
+	).withName("value")
+).withName("ovphysx_config_entry_t")
+
+val ovphysx_create_args: StructLayout = MemoryLayout.structLayout(
+	ovphysx_string_t.withByteAlignment(4).withName("bundled_deps_path"),
+	ovphysx_config_entry_t.ptr.withByteAlignment(4).withName("config_entries"),
+	uint32_t.withName("config_entry_count"),
+	ovphysx_device_t.withName("device"),
+	int32_t.withName("gpu_index")
+).withName("ovphysx_create_args")
+
+val `ovphysx_create_args bundled_deps_path`: MethodHandle = ovphysx_create_args.sliceHandle(groupElement("bundled_deps_path"))
+val `ovphysx_create_args config_entries`: VarHandle = ovphysx_create_args.varHandle(groupElement("config_entries"))
+val `ovphysx_create_args config_entry_count`: VarHandle = ovphysx_create_args.varHandle(groupElement("config_entry_count"))
+val `ovphysx_create_args device`: VarHandle = ovphysx_create_args.varHandle(groupElement("device"))
+val `ovphysx_create_args gpu_index`: VarHandle = ovphysx_create_args.varHandle(groupElement("gpu_index"))
+
+val OVPHYSX_CREATE_ARGS_DEFAULT: MemorySegment = autoArena.allocate(ovphysx_create_args).also {
+	val bundled_deps_path = `ovphysx_create_args bundled_deps_path`.invokeExact(it, 0L) as MemorySegment
+	`ovphysx_string_t ptr`.set(bundled_deps_path, 0L, MemorySegment.NULL)
+	`ovphysx_string_t length`.set(bundled_deps_path, 0L, 0)
+
+	`ovphysx_create_args config_entries`.set(it, 0L, MemorySegment.NULL)
+	`ovphysx_create_args config_entry_count`.set(it, 0L, 0)
+	`ovphysx_create_args device`.set(it, 0L, OVPhysXDevice.OVPHYSX_DEVICE_AUTO.ordinal)
+	`ovphysx_create_args gpu_index`.set(it, 0L, 0)
+}
+
+val ovphysx_result_t: StructLayout = MemoryLayout.structLayout(
+	/** Operation status code */
+	ovphysx_api_status_t.withName("status")
+).withName("ovphysx_result_t")
+
+val ovphysx_op_index_t: ValueLayout.OfLong = uint64_t
+
+/**
+ * Result from ovphysx_wait_op() containing failed op indices and pending operation status.
+ *
+ * For each failed op index, call ovphysx_get_last_op_error(op_index) to
+ * retrieve the error message. Free this struct via ovphysx_destroy_wait_result().
+ */
+val ovphysx_op_wait_result_t: StructLayout = MemoryLayout.structLayout(
+	/** Array of op indices that failed (free via ovphysx_destroy_wait_result) */
+	ovphysx_op_index_t.ptr.withName("error_op_indices"),
+	/** Number of failed op indices */
+	size_t.withName("num_errors"),
+	/** Lowest operation index still pending, 0 if all complete */
+	ovphysx_op_index_t.withName("lowest_pending_op_index")
+)
+
+val `ovphysx_op_wait_result_t num_errors`: VarHandle = ovphysx_op_wait_result_t.varHandle(groupElement("num_errors"))
+val `ovphysx_op_wait_result_t error_op_indices`: VarHandle = ovphysx_op_wait_result_t.varHandle(groupElement("error_op_indices"))
+val `ovphysx_op_wait_result_t lowest_pending_op_index`: VarHandle = ovphysx_op_wait_result_t.varHandle(groupElement("lowest_pending_op_index"))
+
+/**
+ * Result returned by asynchronous API functions.
+ *
+ * On failure (status != OVPHYSX_API_SUCCESS), call ovphysx_get_last_error()
+ * on the same thread to retrieve the error message.
+ */
+val ovphysx_enqueue_result_t: StructLayout = MemoryLayout.structLayout(
+	MemoryLayout.paddingLayout(4),
+	/** Operation status code */
+	ovphysx_api_status_t.withName("status"),
+	/** Operation index for async tracking */
+	ovphysx_op_index_t.withName("op_index")
+).withName("ovphysx_enqueue_result_t")
+
+val `ovphysx_enqueue_result_t status`: VarHandle = ovphysx_enqueue_result_t.varHandle(groupElement("status"))
+val `ovphysx_enqueue_result_t op_index`: VarHandle = ovphysx_enqueue_result_t.varHandle(groupElement("op_index"))
+
+val ovphysx_usd_handle_t: ValueLayout.OfLong = uint64_t
+val ovphysx_handle_t: ValueLayout.OfLong = uint64_t

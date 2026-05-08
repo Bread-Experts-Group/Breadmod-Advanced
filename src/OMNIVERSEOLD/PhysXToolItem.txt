@@ -1,0 +1,98 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import net.minecraft.world.InteractionResult
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Rarity
+import net.minecraft.world.item.context.UseOnContext
+import org.bread_experts_group.api.system.SystemFeatures
+import org.bread_experts_group.api.system.SystemProvider
+import org.bread_experts_group.api.system.device.SystemDevice
+import org.bread_experts_group.api.system.device.SystemDeviceFeatures
+import org.bread_experts_group.api.system.io.IODevice
+import org.bread_experts_group.api.system.io.IODeviceFeatures
+import org.bread_experts_group.api.system.io.open.StandardIOOpenFeatures
+import org.bread_experts_group.breadmod.BreadMod
+import org.bread_experts_group.breadmod.registry.item.IMouseItem
+import org.bread_experts_group.breadmod_advanced.BreadModAdvanced
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
+
+class PhysXToolItem : Item(Properties().stacksTo(1).rarity(Rarity.UNCOMMON)), IMouseItem {
+	private fun createDirectories(device: SystemDevice) {
+		val workList = ArrayDeque<SystemDevice>(1)
+		workList.add(device.get(SystemDeviceFeatures.PATH_PARENT).parent ?: return)
+		while (workList.isNotEmpty()) {
+			val creating = workList.removeFirst()
+			val status = creating.get(SystemDeviceFeatures.IO_DEVICE).open(
+				StandardIOOpenFeatures.CREATE, StandardIOOpenFeatures.DIRECTORY
+			)
+			val device = status.firstNotNullOfOrNull { it as? IODevice }
+			if (device != null) device.getOrNull(IODeviceFeatures.RELEASE)?.close()
+			else {
+				workList.add(creating.get(SystemDeviceFeatures.PATH_PARENT).parent ?: return)
+				workList.add(creating)
+			}
+		}
+	}
+
+	var ok = false
+	override fun onItemUseFirst(stack: ItemStack, context: UseOnContext): InteractionResult {
+		if (ok) return InteractionResult.PASS
+		ok = true
+
+
+		val manager = OVCarboniteManager(nativeLibraries, "breadmod advanced")
+
+		manager.carb_frame_loadPlugins(
+			OVCarboniteManager.PluginLoadingDesc(
+				searchPaths = arrayOf(initialPlugins.get(SystemDeviceFeatures.PATH).element),
+				loadedFileWildcards = arrayOf("*.plugin")
+			)
+		)
+		println("Initial loaded")
+
+		val instance = manager.PhysXInstance(OVPHYSX_CREATE_ARGS_DEFAULT, 1)
+		println("Created instance")
+		val addUsdStatus = instance.physx_addUsd(
+			"C:/Users/Adenosine3Phosphate/IdeaProjects/Breadmod-Advanced/run/client/breadmod/breadmod_advanced/minimal_scene.usda",
+			""
+		)
+		println("Loading scene")
+		if (addUsdStatus.status.status != OVPhysXAPIStatus.OVPHYSX_API_SUCCESS) {
+			throw InternalError("${addUsdStatus.status.status}: \"${instance.physx_getLastError()}\"")
+		}
+		val waitStatus = instance.physx_waitOp(
+			addUsdStatus.status.opIndex,
+			10.toDuration(DurationUnit.SECONDS).toLong(DurationUnit.NANOSECONDS)
+		)
+		println("Scene loaded...$waitStatus")
+		arrayOf(
+			"World",
+			"/World",
+			"/",
+			"PhysicsScene",
+			"/PhysicsScene",
+			"World/PhysicsScene",
+			"/World/PhysicsScene",
+			"Cube",
+			"/Cube",
+			"World/Cube",
+			"/World/Cube"
+		).forEach { a ->
+			repeat(64) {
+				val sStatus = instance.physx_stepSync(
+					1.0f / 60.0f,
+					0f
+				)
+				if (sStatus != OVPhysXAPIStatus.OVPHYSX_API_SUCCESS) TODO("A")
+				val (scene, status) = instance.physx_getPhysXPtr(
+					a,
+					it
+				)
+				if (scene != null) TODO("B $a $it")
+			}
+		}
+		return InteractionResult.CONSUME
+	}
+}

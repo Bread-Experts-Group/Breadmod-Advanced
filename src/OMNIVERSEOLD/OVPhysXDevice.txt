@@ -1,0 +1,43 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+
+enum class OVPhysXDevice {
+	/**
+	 * AUTO (GPU PREFERRED) -- zero-init safe default.
+	 *
+	 * ovphysx prefers GPU simulation when a usable CUDA driver + CUDA device
+	 * are available. If CUDA is unavailable, ovphysx falls back to CPU-only
+	 * simulation and still creates the instance successfully.
+	 *
+	 * This is the recommended default for best developer UX: a single wheel/
+	 * SDK works on both GPU and CPU-only machines without special casing.
+	 *
+	 * GPU ordinal handling:
+	 * - If gpu_index >= 0, that ordinal is used when GPU is selected.
+	 * - If gpu_index == -1, ovphysx uses PhysX's default CUDA selection.
+	 */
+	OVPHYSX_DEVICE_AUTO,
+
+	/**
+	 * GPU simulation (GPU REQUIRED).
+	 *
+	 * This mode requires a usable CUDA driver + at least one CUDA device.
+	 * If CUDA is unavailable, ovphysx_create_instance() fails with
+	 * OVPHYSX_API_GPU_NOT_AVAILABLE. There is no silent fallback to CPU.
+	 *
+	 * Use this when your application depends on GPU/DirectGPU behavior and
+	 * you want an explicit error on CPU-only machines.
+	 */
+	OVPHYSX_DEVICE_GPU,
+
+	/**
+	 * CPU-only simulation (GPU DISABLED).
+	 *
+	 * This mode never attempts to use CUDA and is expected to work on
+	 * machines without a CUDA driver/GPU.
+	 */
+	OVPHYSX_DEVICE_CPU
+}
+
+val ovphysx_device_t = int

@@ -1,0 +1,27 @@
+package org.bread_experts_group.breadmod_advanced.registry.item
+
+import org.bread_experts_group.breadmod_advanced.registry.item.CanonicalLayouts.int
+import java.lang.foreign.ValueLayout
+
+enum class OVPhysXAPIStatus {
+	/** Operation completed or enqueued successfully */
+	OVPHYSX_API_SUCCESS,
+	/** Operation failed - check error field */
+	OVPHYSX_API_ERROR,
+	/** Operation timed out */
+	OVPHYSX_API_TIMEOUT,
+	/** Feature not yet implemented */
+	OVPHYSX_API_NOT_IMPLEMENTED,
+	/** Invalid argument provided */
+	OVPHYSX_API_INVALID_ARGUMENT,
+	/** Requested resource not found (handle unknown, binding invalidated) */
+	OVPHYSX_API_NOT_FOUND,
+	/** Caller-supplied buffer is too small; check out_required_size */
+	OVPHYSX_API_BUFFER_TOO_SMALL,
+	/** Tensor device doesn't match binding's expected device */
+	OVPHYSX_API_DEVICE_MISMATCH,
+	/** GPU requested but not available or CUDA init failed */
+	OVPHYSX_API_GPU_NOT_AVAILABLE
+}
+
+val ovphysx_api_status_t: ValueLayout = int
