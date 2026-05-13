@@ -1,6 +1,7 @@
 @file:Suppress("ImplicitThis", "UnstableApiUsage")
 
 import net.neoforged.moddevgradle.dsl.RunModel
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
 	kotlin("jvm") version "2.3.21"
@@ -139,6 +140,7 @@ dependencies {
 	upwardsLibraries(implementation(breadServerLib) { isTransitive = false })
 	implementation(upwards)
 	implementation(breadMod)
+	implementation(kotlin("reflect"))
 	// Mod Compatibility //
 	implementation("curse.maven:jade-324717:5976517")
 	implementation("curse.maven:projecte-226410:6611984")
@@ -207,3 +209,7 @@ neoForge.ideSyncTask(
 		from(upwardsLibraries).into("./src/main/resources/libs")
 	}
 )
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.compilerOptions {
+	freeCompilerArgs.set(listOf("-Xannotation-default-target=param-property"))
+}

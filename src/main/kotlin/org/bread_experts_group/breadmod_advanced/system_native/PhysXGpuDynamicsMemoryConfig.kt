@@ -44,7 +44,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val tempBufferCapacity: PxU64_t,
+	@DefinedProperty(0) val tempBufferCapacity: PxU64_t = 16u * 1024u * 1024uL,
 	/**
 	 * Size of contact stream buffer allocated in pinned host memory. This is double-buffered so total
 	 * `allocation size = 2 * contactStreamCapacity * sizeof(PxContact)`.
@@ -53,7 +53,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val maxRigidContactCount: PxU32_t,
+	@DefinedProperty(1) val maxRigidContactCount: PxU32_t = 1024u * 512u,
 	/**
 	 * Size of the contact patch stream buffer allocated in pinned host memory. This is double-buffered so total
 	 * `allocation size = 2 * patchStreamCapacity * sizeof(PxContactPatch)`.
@@ -62,7 +62,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val maxRigidPatchCount: PxU32_t,
+	@DefinedProperty(2) val maxRigidPatchCount: PxU32_t = 1024u * 80u,
 	/**
 	 * Initial capacity of the GPU and pinned host memory heaps. Additional memory will be allocated if more
 	 * memory is required.
@@ -71,7 +71,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val heapCapacity: PxU32_t,
+	@DefinedProperty(3) val heapCapacity: PxU32_t = 64u * 1024u * 1024u,
 	/**
 	 * Capacity of found and lost buffers allocated in GPU global memory. This is used for the found/lost
 	 * pair reports in the BP.
@@ -80,7 +80,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val foundLostPairsCapacity: PxU32_t,
+	@DefinedProperty(4) val foundLostPairsCapacity: PxU32_t = 256u * 1024u,
 	/**
 	 * Capacity of found and lost buffers in aggregate system allocated in GPU global memory. This is
 	 * used for the found/lost pair reports in AABB manager.
@@ -89,7 +89,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val foundLostAggregatePairsCapacity: PxU32_t,
+	@DefinedProperty(5) val foundLostAggregatePairsCapacity: PxU32_t = 1024u,
 	/**
 	 * Capacity of aggregate pair buffer allocated in GPU global memory.
 	 *
@@ -97,7 +97,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val totalAggregatePairsCapacity: PxU32_t,
+	@DefinedProperty(6) val totalAggregatePairsCapacity: PxU32_t = 1024u,
 	/**
 	 * Capacity of deformable surface contact buffer allocated in GPU global memory.
 	 *
@@ -105,7 +105,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val maxDeformableSurfaceContacts: PxU32_t,
+	@DefinedProperty(7) val maxDeformableSurfaceContacts: PxU32_t = 1u * 1024u * 1024u,
 	/**
 	 * Capacity of deformable volume contact buffer allocated in GPU global memory.
 	 *
@@ -113,7 +113,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val maxDeformableVolumeContacts: PxU32_t,
+	@DefinedProperty(9) val maxDeformableVolumeContacts: PxU32_t = 1u * 1024u * 1024u,
 	/**
 	 * Capacity of particle contact buffer allocated in GPU global memory.
 	 *
@@ -121,7 +121,7 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val maxParticleContacts: PxU32_t,
+	@DefinedProperty(11) val maxParticleContacts: PxU32_t = 1u * 1024u * 1024u,
 	/**
 	 * Capacity of the collision stack buffer, used as scratch space during narrowphase collision detection.
 	 *
@@ -129,5 +129,11 @@ data class PhysXGpuDynamicsMemoryConfig(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val collisionStackSize: PxU32_t
-)
+	@DefinedProperty(12) val collisionStackSize: PxU32_t = 64u * 1024u * 1024u
+) {
+	@Deprecated("Deprecated in PhysX", ReplaceWith("maxDeformableSurfaceContacts"))
+	@DefinedProperty(8) val maxFemClothContacts: PxU32_t = 0u
+
+	@Deprecated("Deprecated in PhysX", ReplaceWith("maxDeformableVolumeContacts"))
+	@DefinedProperty(10) val maxSoftBodyContacts: PxU32_t = 0u
+}

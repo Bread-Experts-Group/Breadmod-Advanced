@@ -30,8 +30,22 @@ package org.bread_experts_group.breadmod_advanced.system_native
 
 import org.bread_experts_group.generic.FlagSet
 import java.lang.foreign.MemorySegment
+import java.lang.invoke.MethodHandle
 
-open class PhysXSceneDesc(
+/**
+ * Descriptor class for scenes. See [PhysXScene].
+ *
+ * This struct must be initialized with the same [PhysXTolerancesScale] values used to initialize [PhysXPhysics].
+ *
+ * @see PhysXScene
+ * @see PhysXPhysics.createScene
+ * @see PhysXTolerancesScale
+ *
+ * @author Miko Elbrecht (Kotlin)
+ * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+ * @since In accordance with PhysX 5.6.1
+ */
+data class PhysXSceneDesc(
 	/**
 	 * Gravity vector.
 	 *
@@ -46,7 +60,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val gravity: PxVec3_t = PxVec3_t(0f, 0f, 0f),
+	@DefinedProperty(0) var gravity: PxVec3_t = PxVec3_t(0f, 0f, 0f),
 	/**
 	 * Possible notification callback.
 	 *
@@ -58,7 +72,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val simulationEventCallback: PhysXSimulationEventCallback? = null,
+	@DefinedProperty(1) var simulationEventCallback: Pointer<PhysXSimulationEventCallback> = Pointer(null),
 	/**
 	 * Possible asynchronous callback for contact modification.
 	 *
@@ -70,7 +84,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val contactModifyCallback: PhysXContactModifyCallback? = null,
+	@DefinedProperty(2) var contactModifyCallback: Pointer<PhysXContactModifyCallback> = Pointer(null),
 	/**
 	 * Possible asynchronous callback for contact modification.
 	 *
@@ -82,7 +96,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val ccdContactModifyCallback: PhysXCCDContactModifyCallback? = null,
+	@DefinedProperty(3) var ccdContactModifyCallback: Pointer<PhysXCCDContactModifyCallback> = Pointer(null),
 	/**
 	 * Possible asynchronous callback for post-solve operations on deformable surfaces.
 	 *
@@ -92,7 +106,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val deformableSurfacePostSolveCallback: PhysXPostSolveCallback? = null,
+	@DefinedProperty(4) var deformableSurfacePostSolveCallback: Pointer<PhysXPostSolveCallback> = Pointer(null),
 	/**
 	 * Possible asynchronous callback for post-solve operations on deformable volumes.
 	 *
@@ -102,7 +116,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val deformableVolumePostSolveCallback: PhysXPostSolveCallback? = null,
+	@DefinedProperty(5) var deformableVolumePostSolveCallback: Pointer<PhysXPostSolveCallback> = Pointer(null),
 	/**
 	 * Shared global filter data which will get passed into the filter shader.
 	 *
@@ -116,7 +130,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val filterShaderData: MemorySegment = MemorySegment.NULL,
+	@DefinedProperty(6) var filterShaderData: MemorySegment = MemorySegment.NULL,
 	/**
 	 * The custom filter shader to use for collision filtering.
 	 *
@@ -131,7 +145,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val filterShader: PxSimulationFilterShader,
+	@DefinedProperty(8) var filterShader: MethodHandle? = null,
 	/**
 	 * A custom collision filter callback which can be used to implement more complex filtering operations which need
 	 * access to the simulation state, for example.
@@ -143,7 +157,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val filterCallback: PhysXSimulationFilterCallback? = null,
+	@DefinedProperty(9) var filterCallback: Pointer<PhysXSimulationFilterCallback> = Pointer(null),
 	/**
 	 * Filtering mode for kinematic-kinematic pairs in the broadphase.
 	 *
@@ -154,7 +168,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val kineKineFilteringMode: PxPairFilteringMode = PxPairFilteringMode.eDEFAULT,
+	@DefinedProperty(10) var kineKineFilteringMode: PxPairFilteringMode = PxPairFilteringMode.eDEFAULT,
 	/**
 	 * Filtering mode for static-kinematic pairs in the broadphase.
 	 *
@@ -165,7 +179,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val staticKineFilteringMode: PxPairFilteringMode = PxPairFilteringMode.eDEFAULT,
+	@DefinedProperty(11) var staticKineFilteringMode: PxPairFilteringMode = PxPairFilteringMode.eDEFAULT,
 	/**
 	 * Selects the broad-phase algorithm to use.
 	 *
@@ -176,7 +190,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val broadPhaseType: PxBroadPhaseType = PxBroadPhaseType.ePABP,
+	@DefinedProperty(12) var broadPhaseType: PxBroadPhaseType = PxBroadPhaseType.ePABP,
 	/**
 	 * Broad-phase callback
 	 *
@@ -188,7 +202,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val broadPhaseCallback: PhysXBroadPhaseCallback? = null,
+	@DefinedProperty(13) var broadPhaseCallback: Pointer<PhysXBroadPhaseCallback> = Pointer(null),
 	/**
 	 * Optional GPU broad-phase descriptor.
 	 *
@@ -200,7 +214,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val gpuBroadPhaseDesc: PhysXGpuBroadPhaseDesc? = null,
+	@DefinedProperty(14) var gpuBroadPhaseDesc: Pointer<PhysXGpuBroadPhaseDesc> = Pointer(null),
 	/**
 	 * Expected scene limits.
 	 *
@@ -211,7 +225,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val limits: PxSceneLimits,
+	@DefinedProperty(15) var limits: PxSceneLimits = PxSceneLimits(),
 	/**
 	 * Selects the solver algorithm to use.
 	 *
@@ -222,9 +236,9 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val solverType: PxSolverType = PxSolverType.ePGS,
+	@DefinedProperty(17) var solverType: PxSolverType = PxSolverType.ePGS,
 	/**
-	 * A contact with a relative velocity below this will not bounce. A typical value for simulation.
+	 * A contact with a relative velocity below this will not bounce. A typical varue for simulation.
 	 * stability is about `0.2 * gravity`.
 	 *
 	 * **Range:** (0, PX_MAX_F32)
@@ -237,7 +251,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val bounceThresholdVelocity: PxReal_t, // =  0.2 * PxTolerancesScale::speed
+	@DefinedProperty(18) var bounceThresholdVelocity: PxReal_t,
 	/**
 	 * A threshold of contact separation distance used to decide if a contact point will experience friction forces.
 	 *
@@ -257,7 +271,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val frictionOffsetThreshold: PxReal_t, // 0.04 * PxTolerancesScale::length
+	@DefinedProperty(19) var frictionOffsetThreshold: PxReal_t,
 	/**
 	 * Friction correlation distance used to decide whether contacts are close enough to be merged into a single friction anchor point or not.
 	 *
@@ -274,7 +288,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val frictionCorrelationDistance: PxReal_t, // 0.025f * PxTolerancesScale::length
+	@DefinedProperty(20) var frictionCorrelationDistance: PxReal_t, // 0.025f * PxTolerancesScale::length
 	/**
 	 * Flags used to select scene options.
 	 *
@@ -287,7 +301,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val flags: FlagSet<PxSceneFlag> = FlagSet.of(PxSceneFlag.eENABLE_PCM),
+	var flags: PxU32_t = FlagSet.of(PxSceneFlag.eENABLE_PCM).maskI.toUInt(),
 	/**
 	 * The CPU task dispatcher for the scene.
 	 *
@@ -298,7 +312,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val cpuDispatcher: PhysXCpuDispatcher,
+	@DefinedProperty(22) var cpuDispatcher: Pointer<PhysXCpuDispatcher> = Pointer(null),
 	/**
 	 * The CUDA context manager for the scene.
 	 *
@@ -311,7 +325,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val cudaContextManager: PhysXCudaContextManager,
+	@DefinedProperty(23) var cudaContextManager: Pointer<PhysXCudaContextManager> = Pointer(null),
 	/**
 	 * Will be copied to [PhysXScene.userData].
 	 *
@@ -319,13 +333,13 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val userData: MemorySegment = MemorySegment.NULL,
+	@DefinedProperty(24) var userData: MemorySegment = MemorySegment.NULL,
 	/**
 	 * Defines the number of actors required to spawn a separate rigid body solver island task chain.
 	 *
-	 * This parameter defines the minimum number of actors required to spawn a separate rigid body solver task chain. Setting a low value
+	 * This parameter defines the minimum number of actors required to spawn a separate rigid body solver task chain. Setting a low varue
 	 * will potentially cause more task chains to be generated. This may result in the overhead of spawning tasks can become a limiting performance factor.
-	 * Setting a high value will potentially cause fewer islands to be generated. This may reduce thread scaling (fewer task chains spawned) and may
+	 * Setting a high varue will potentially cause fewer islands to be generated. This may reduce thread scaling (fewer task chains spawned) and may
 	 * detrimentally affect performance if some bodies in the scene have large solver iteration counts because all constraints in a given island are solved by the
 	 * maximum number of solver iterations requested by any body in the island.
 	 *
@@ -338,13 +352,13 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val solverBatchSize: PxU32_t = 128u,
+	@DefinedProperty(25) var solverBatchSize: PxU32_t = 128u,
 	/**
 	 * Defines the number of articulations required to spawn a separate rigid body solver island task chain.
 	 *
-	 * This parameter defines the minimum number of articulations required to spawn a separate rigid body solver task chain. Setting a low value
+	 * This parameter defines the minimum number of articulations required to spawn a separate rigid body solver task chain. Setting a low varue
 	 * will potentially cause more task chains to be generated. This may result in the overhead of spawning tasks can become a limiting performance factor.
-	 * Setting a high value will potentially cause fewer islands to be generated. This may reduce thread scaling (fewer task chains spawned) and may
+	 * Setting a high varue will potentially cause fewer islands to be generated. This may reduce thread scaling (fewer task chains spawned) and may
 	 * detrimentally affect performance if some bodies in the scene have large solver iteration counts because all constraints in a given island are solved by the
 	 * maximum number of solver iterations requested by any body in the island.
 	 *
@@ -357,13 +371,13 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val solverArticulationBatchSize: PxU32_t = 16u,
+	@DefinedProperty(26) var solverArticulationBatchSize: PxU32_t = 16u,
 	/**
 	 * Setting to define the number of 16K blocks that will be initially reserved to store contact, friction, and contact cache data.
 	 * This is the number of 16K memory blocks that will be automatically allocated from the user allocator when the scene is instantiated. Further 16k
 	 * memory blocks may be allocated during the simulation up to maxNbContactDataBlocks.
 	 *
-	 * *This value cannot be larger than maxNbContactDataBlocks because that defines the maximum number of 16k blocks that can be allocated by the SDK.*
+	 * *This varue cannot be larger than maxNbContactDataBlocks because that defines the maximum number of 16k blocks that can be allocated by the SDK.*
 	 *
 	 * **Range:** [0, PX_MAX_U32]
 	 *
@@ -374,7 +388,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val nbContactDataBlocks: PxU32_t = 0u,
+	@DefinedProperty(27) var nbContactDataBlocks: PxU32_t = 0u,
 	/**
 	 * Setting to define the maximum number of 16K blocks that can be allocated to store contact, friction, and contact cache data.
 	 * As the complexity of a scene increases, the SDK may require to allocate new 16k blocks in addition to the blocks it has already
@@ -397,7 +411,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val maxNbContactDataBlocks: PxU32_t = 65536u,
+	@DefinedProperty(28) var maxNbContactDataBlocks: PxU32_t = 65536u,
 	/**
 	 * The maximum bias coefficient used in the constraint solver
 	 *
@@ -418,7 +432,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val maxBiasCoefficient: PxReal_t = PX_MAX_F32,
+	@DefinedProperty(29) var maxBiasCoefficient: PxReal_t = PX_MAX_F32,
 	/**
 	 * Size of the contact report stream (in bytes).
 	 *
@@ -435,11 +449,11 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val contactReportStreamBufferSize: PxU32_t = 8192u,
+	@DefinedProperty(30) var contactReportStreamBufferSize: PxU32_t = 8192u,
 	/**
 	 * Maximum number of CCD passes
 	 *
-	 * The CCD performs multiple passes, where each pass every object advances to its time of first impact. This value defines how many passes the CCD system should perform.
+	 * The CCD performs multiple passes, where each pass every object advances to its time of first impact. This varue defines how many passes the CCD system should perform.
 	 *
 	 * *The CCD system is a multi-pass best-effort conservative advancement approach. After the defined number of passes has been completed, any remaining time is dropped.*
 	 * *This defines the maximum number of passes the CCD can perform. It may perform fewer if additional passes are not necessary.*
@@ -453,16 +467,16 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val ccdMaxPasses: PxU32_t = 1u,
+	@DefinedProperty(31) var ccdMaxPasses: PxU32_t = 1u,
 	/**
 	 * CCD threshold
 	 *
 	 * CCD performs sweeps against shapes if and only if the relative motion of the shapes is fast-enough that a collision would be missed
 	 * by the discrete contact generation. However, in some circumstances, e.g. when the environment is constructed from large convex shapes, this
 	 * approach may produce undesired simulation artefacts. This parameter defines the minimum relative motion that would be required to force CCD between shapes.
-	 * The smaller of this value and the sum of the thresholds calculated for the shapes involved will be used.
+	 * The smaller of this varue and the sum of the thresholds calculated for the shapes involved will be used.
 	 *
-	 * *It is not advisable to set this to a very small value as this may lead to CCD "jamming" and detrimentally effect performance. This value should be at least larger than the translation caused by a single frame's gravitational effect*
+	 * *It is not advisable to set this to a very small varue as this may lead to CCD "jamming" and detrimentally effect performance. This varue should be at least larger than the translation caused by a single frame's gravitational effect*
 	 *
 	 * **Range:** [Eps, PX_MAX_F32]
 	 *
@@ -473,7 +487,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val ccdThreshold: PxReal_t = PX_MAX_F32,
+	@DefinedProperty(32) var ccdThreshold: PxReal_t = PX_MAX_F32,
 	/**
 	 * A threshold for speculative CCD. Used to control whether bias, restitution or a combination of the two are used to resolve the contacts.
 	 *
@@ -488,36 +502,39 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val ccdMaxSeparation: PxReal_t, // 0.04 * PxTolerancesScale::length
+	@DefinedProperty(33) var ccdMaxSeparation: PxReal_t, // 0.04 * PxTolerancesScale::length
 	/**
-	 * The wake counter reset value
+	 * The wake counter reset varue
 	 *
-	 * Calling wakeUp() on objects which support sleeping will set their wake counter value to the specified reset value.
+	 * Calling wakeUp() on objects which support sleeping will set their wake counter varue to the specified reset varue.
 	 *
 	 * **Range:** (0, PX_MAX_F32)
 	 *
 	 * @see PxRigidDynamic.wakeUp
 	 * @see PxArticulationReducedCoordinate.wakeUp
-	 * @see PhysXScene.getWakeCounterResetValue
+	 * @see PhysXScene.getWakeCounterResetvarue
 	 *
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val wakeCounterResetValue: PxReal_t, // 0.4 (which corresponds to 20 frames for a time step of 0.02)
+	@DefinedProperty(34) var wakeCounterResetValue: PxReal_t = 0.4f,
 	/**
 	 * The bounds used to sanity check user-set positions of actors and articulation links
 	 *
-	 * These bounds are used to check the position values of rigid actors inserted into the scene, and positions set for rigid actors
+	 * These bounds are used to check the position varues of rigid actors inserted into the scene, and positions set for rigid actors
 	 * already within the scene.
 	 *
-	 * **Range:** any valid PxBounds3
+	 * **Range:** any varid PxBounds3
 	 *
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val sanityBounds: PhysXBounds3, // (-PX_MAX_BOUNDS_EXTENTS, PX_MAX_BOUNDS_EXTENTS) on each axis
+	@DefinedProperty(35) var sanityBounds: PhysXBounds3 = PhysXBounds3(
+		PxVec3_t(-PX_MAX_BOUNDS_EXTENTS, -PX_MAX_BOUNDS_EXTENTS, -PX_MAX_BOUNDS_EXTENTS),
+		PxVec3_t(PX_MAX_BOUNDS_EXTENTS, PX_MAX_BOUNDS_EXTENTS, PX_MAX_BOUNDS_EXTENTS),
+	),
 	/**
 	 * The pre-allocations performed in the GPU dynamics pipeline.
 	 *
@@ -525,11 +542,11 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val gpuDynamicsConfig: PhysXGpuDynamicsMemoryConfig,
+	@DefinedProperty(36) var gpuDynamicsConfig: PhysXGpuDynamicsMemoryConfig = PhysXGpuDynamicsMemoryConfig(),
 	/**
 	 * Limitation for the partitions in the GPU dynamics pipeline.
 	 * This variable must be power of 2.
-	 * A value greater than 32 is currently not supported.
+	 * A varue greater than 32 is currently not supported.
 	 *
 	 * **Range:** (1, 32)
 	 *
@@ -537,7 +554,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val gpuMaxNumPartitions: PxU32_t,
+	@DefinedProperty(37) var gpuMaxNumPartitions: PxU32_t,
 	/**
 	 * Limitation for the number of static rigid body partitions in the GPU dynamics pipeline.
 	 *
@@ -547,7 +564,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val gpuMaxNumStaticPartitions: PxU32_t = 16u,
+	@DefinedProperty(38) var gpuMaxNumStaticPartitions: PxU32_t = 16u,
 	/**
 	 * Defines which compute version the GPU dynamics should target. DO NOT MODIFY
 	 *
@@ -555,7 +572,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val gpuComputeVersion: PxU32_t,
+	@DefinedProperty(39) var gpuComputeVersion: PxU32_t,
 	/**
 	 * Defines the size of a contact pool slab.
 	 * Contact pairs and associated data are allocated using a pool allocator. Increasing the slab size can trade
@@ -568,7 +585,7 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val contactPairSlabSize: PxU32_t = 256u,
+	@DefinedProperty(40) var contactPairSlabSize: PxU32_t = 256u,
 	/**
 	 * The scene query sub-system for the scene.
 	 * 
@@ -582,5 +599,53 @@ open class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	val sceneQuerySystem: PxSceneQuerySystem? = null
-)
+	@DefinedProperty(41) var sceneQuerySystem: Pointer<PxSceneQuerySystem> = Pointer(null),
+	/**
+	 * For internal use only
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	@DefinedProperty(42) var scale: PhysXTolerancesScale
+) : PhysXSceneQueryDesc() {
+	constructor(
+		scale: PhysXTolerancesScale
+	) : this(
+		scale = scale,
+		bounceThresholdVelocity = 0.2f * scale.speed,
+		frictionOffsetThreshold = 0.04f * scale.length,
+		frictionCorrelationDistance = 0.025f * scale.length,
+		ccdMaxSeparation = 0.04f * scale.length,
+		gpuMaxNumPartitions = 8u,
+		gpuComputeVersion = 0u
+	)
+
+	/**
+	 * Size (in bytes) of the shared global filter data #filterShaderData.
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 *
+	 * @see PxSimulationFilterShader
+	 * @see filterShaderData
+	 * @see PhysXScene.getFilterShaderDataSize
+	 */
+	@DefinedProperty(7)
+	val filterShaderDataSize: PxU32_t = filterShaderData.byteSize().toUInt()
+
+	/**
+	 * Selects the friction algorithm to use for simulation.
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 *
+	 * @see PxFrictionType
+	 * @see PhysXScene.getFrictionType
+	 */
+	@Deprecated("Since only the patch friction model is supported now, the frictionType parameter is obsolete.")
+	@DefinedProperty(16)
+	val frictionType: PxFrictionType = PxFrictionType.ePATCH
+}

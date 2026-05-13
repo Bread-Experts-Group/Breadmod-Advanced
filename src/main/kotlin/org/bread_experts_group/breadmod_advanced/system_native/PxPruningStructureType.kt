@@ -29,51 +29,51 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
 /**
- * Class to define the scale at which simulation runs. Most simulation tolerances are
-   calculated in terms of the values here.
-
- * *if you change the simulation scale, you will probably also wish to change the scene's
-   default value of gravity, and stable simulation will probably require changes to the scene's
-   bounceThreshold also.*
-
+ * Pruning structure used to accelerate scene queries.
+ *
+ * [eNONE] uses a simple data structure that consumes less memory than the alternatives,
+ * but generally has slower query performance.
+ *
+ * [eDYNAMIC_AABB_TREE] usually provides the fastest queries. However there is a
+ * constant per-frame management cost associated with this structure. How much work should
+ * be done per frame can be tuned via the [PxSceneQueryDesc.dynamicTreeRebuildRateHint]
+ * parameter.
+ *
+ * [eSTATIC_AABB_TREE] is typically used for static objects. It is the same as the
+ * dynamic AABB tree, without the per-frame overhead. This can be a good choice for static
+ * objects, if no static objects are added, moved or removed after the scene has been
+ * created. If there is no such guarantee (e.g. when streaming parts of the world in and out),
+ * then the dynamic version is a better choice even for static objects.
+ *
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-sealed class PhysXTolerancesScale {
-   /**
-    * The approximate size of objects in the simulation.
-    *
-    * For simulating roughly human-sized in metric units, 1 is a good choice.
-    * If simulation is done in centimetres, use 100 instead. This is used to
-    * estimate certain length-related tolerances.
+enum class PxPruningStructureType {
+	/**
+	 * Using a simple data structure
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	eNONE,
 
-    * @author Miko Elbrecht (Kotlin)
-    * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-    * @since In accordance with PhysX 5.6.1
-    */
-   abstract val length: Float
-   /**
-    * The typical magnitude of velocities of objects in simulation. This is used to estimate
-    * whether a contact should be treated as bouncing or resting based on its impact velocity,
-    * and a kinetic energy threshold below which the simulation may put objects to sleep.
-    *
-    * For normal physical environments, a good choice is the approximate speed of an object falling
-    * under gravity for one second.
+	/**
+	 * Using a dynamic AABB tree
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	eDYNAMIC_AABB_TREE,
 
-    * @author Miko Elbrecht (Kotlin)
-    * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-    * @since In accordance with PhysX 5.6.1
-    */
-   abstract val speed: Float
-
-   abstract class ReadOnly : PhysXTolerancesScale() {
-      @DefinedProperty(0) abstract override val length: Float
-      @DefinedProperty(1) abstract override val speed: Float
-   }
-
-   open class ReadWrite : PhysXTolerancesScale() {
-      @DefinedProperty(0) override var length: Float = 1f
-      @DefinedProperty(1) override var speed: Float = 10f
-   }
+	/**
+	 * Using a static AABB tree
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	eSTATIC_AABB_TREE
 }

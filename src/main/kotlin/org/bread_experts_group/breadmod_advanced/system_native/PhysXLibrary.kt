@@ -32,6 +32,7 @@ import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.char
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.int
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.ptr
+import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
 import org.bread_experts_group.ffi.getDowncall
 import java.lang.foreign.Arena
 import java.lang.foreign.Linker
@@ -40,16 +41,26 @@ import java.lang.foreign.SymbolLookup
 import java.lang.invoke.MethodHandle
 
 class PhysXLibrary private constructor(
+	private val pxCreateCudaContextManager: MethodHandle,
 	private val pxCreatePhysics: MethodHandle,
 	private val pxCreatePvd: MethodHandle,
+	private val pxDefaultCpuDispatcherCreate: MethodHandle,
 	private val pxDefaultPvdSocketTransportCreate: MethodHandle,
 	private val pxDefaultPvdFileTransportCreate: MethodHandle,
+	private val pxDefaultSimulationFilterShader: MethodHandle,
 	private val linker: Linker
 ) {
 	constructor(
 		lookup: SymbolLookup,
 		linker: Linker
 	) : this(
+		lookup.getDowncall(
+			linker, "PxCreateCudaContextManager", PxCudaContextManager.ptr,
+			PxFoundation.ptr.withName("foundation"),
+			PxCudaContextManagerDesc.ptr.withName("desc"),
+			PxProfilerCallback.ptr.withName("profilerCallback"),
+			bool.withName("launchSynchronous")
+		)!!,
 		lookup.getDowncall(
 			linker, "PxCreatePhysics", PxPhysics.ptr,
 			PxU32.withName("version"),
@@ -64,6 +75,13 @@ class PhysXLibrary private constructor(
 			PxFoundation.ptr.withName("foundation")
 		)!!,
 		lookup.getDowncall(
+			linker, "PxDefaultCpuDispatcherCreateBM", PxDefaultCpuDispatcher.ptr,
+			PxU32.withName("numThreads"),
+			PxU32.ptr.withName("affinityMasks"),
+			int.withName("mode"),
+			PxU32.withName("yieldProcessorCount")
+		)!!,
+		lookup.getDowncall(
 			linker, "PxDefaultPvdSocketTransportCreateBM", PxPvdTransport.ptr,
 			char.ptr.withName("host"),
 			int.withName("port"),
@@ -73,8 +91,49 @@ class PhysXLibrary private constructor(
 			linker, "PxDefaultPvdFileTransportCreateBM", PxPvdTransport.ptr,
 			char.ptr.withName("name")
 		)!!,
+		lookup.getDowncall(
+			linker, "PxDefaultSimulationFilterShaderBM", PxU16,
+			PxFilterObjectAttributes.withName("attributes0"),
+			PxFilterData.ptr.withName("filterData0"),
+			PxFilterObjectAttributes.withName("attributes1"),
+			PxFilterData.ptr.withName("filterData1"),
+			PxPairFlags.ptr.withName("pairFlags"),
+			`void*`.withName("constantBlock"),
+			PxU32.withName("constantBlockSize")
+		)!!,
 		linker
 	)
+
+	/**
+	 * Allocate a CUDA Context manager, complete with heaps.
+	 * You only need one CUDA context manager per GPU device you intend to use for
+	 * CUDA tasks.
+	 * @param foundation PhysXFoundation instance.
+	 * @param desc Cuda context manager desc.
+	 * @param profilerCallback PhysX profiler callback instance.
+	 * @param launchSynchronous Set launchSynchronous to true for CUDA to report the actual point of failure.
+	 *
+	 * @see PxGetProfilerCallback
+
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	fun pxCreateCudaContextManager(
+		arena: Arena,
+		foundation: PhysXFoundation,
+		desc: PhysXCudaContextManagerDesc,
+		profilerCallback: PhysXProfilerCallback? = null,
+		launchSynchronous: Boolean = false
+	): PhysXCudaContextManager {
+		val ptr = pxCreateCudaContextManager.invokeExact(
+			foundation.segment,
+			cppAnalyze(desc).allocate(arena, linker),
+			if (profilerCallback != null) TODO("!") else MemorySegment.NULL,
+			launchSynchronous
+		) as MemorySegment
+		return PhysXCudaContextManager(ptr)
+	}
 
 	/**
 	 * Creates an instance of the physics SDK.
@@ -112,19 +171,16 @@ class PhysXLibrary private constructor(
 		pvd: PhysXPvd? = null,
 		omniPvd: PhysXOmniPvd? = null
 	): PhysXPhysics? {
-		val tolerance = arena.allocate(PxTolerancesScale)
-		`PxTolerancesScale defaultLength`.set(tolerance, 0, scale.defaultLength)
-		`PxTolerancesScale defaultSpeed`.set(tolerance, 0, scale.defaultSpeed)
 		val physics = pxCreatePhysics.invokeExact(
 			version.toInt(),
 			foundation.segment,
-			tolerance,
+			cppAnalyze(scale).allocate(arena, linker),
 			trackOutstandingAllocations,
 			pvd?.segment ?: MemorySegment.NULL,
 			omniPvd?.segment ?: MemorySegment.NULL
 		) as MemorySegment
 		if (physics == MemorySegment.NULL) return null
-		return PhysXPhysics(linker, physics)
+		return PhysXPhysics::class.java.image(linker, physics)
 	}
 
 	/**
@@ -139,6 +195,49 @@ class PhysXLibrary private constructor(
 		linker,
 		pxCreatePvd.invokeExact(foundation.segment) as MemorySegment
 	)
+
+	/**
+	 * Create default dispatcher, extensions SDK needs to be initialized first.
+	 *
+	 * @param numThreads Number of worker threads the dispatcher should use.
+	 * @param affinityMasks Array with affinity mask for each thread. If not defined, default masks will be used.
+	 * @param mode is the strategy employed when a busy-wait is encountered.
+	 * @param yieldProcessorCount specifies the number of times a OS-specific yield processor command will be executed
+	 * during each cycle of a busy-wait in the event that the specified mode is [PxDefaultCpuDispatcherWaitForWorkMode.eYIELD_PROCESSOR]
+	 *
+	 * *numThreads may be zero in which case no worker thread are initialized and
+	 * simulation tasks will be executed on the thread that calls [PhysXScene.simulate]*
+	 *
+	 * *yieldProcessorCount must be greater than zero if [PxDefaultCpuDispatcherWaitForWorkMode.eYIELD_PROCESSOR] is the
+	 * chosen mode and equal to zero for all other modes.*
+	 *
+	 * *[PxDefaultCpuDispatcherWaitForWorkMode.eYIELD_THREAD] and [PxDefaultCpuDispatcherWaitForWorkMode.eYIELD_PROCESSOR]
+	 * modes will use compute resources even if the simulation is not running.
+	 * It is left to users to keep threads inactive, if so desired, when no simulation is running.*
+	 *
+	 * @see PhysXDefaultCpuDispatcher
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	fun pxDefaultCpuDispatcherCreate(
+		arena: Arena,
+		numThreads: UInt,
+		affinityMasks: Mutable<UInt>? = null,
+		mode: PxDefaultCpuDispatcherWaitForWorkMode = PxDefaultCpuDispatcherWaitForWorkMode.eWAIT_FOR_WORK,
+		yieldProcessorCount: UInt = 0u
+	): PhysXCpuDispatcher {
+		val aM = if (affinityMasks != null) arena.allocate(PxU32) else MemorySegment.NULL
+		val cpu = pxDefaultCpuDispatcherCreate.invokeExact(
+			numThreads.toInt(),
+			aM,
+			mode.ordinal,
+			yieldProcessorCount.toInt()
+		) as MemorySegment
+		if (affinityMasks != null) affinityMasks.set(aM.get(PxU32, 0).toUInt())
+		return PhysXCpuDispatcher(cpu)
+	}
 
 	/**
 	 * @author Miko Elbrecht (Kotlin)
@@ -168,4 +267,47 @@ class PhysXLibrary private constructor(
 			else MemorySegment.NULL
 		) as MemorySegment
 	)
+
+	/**
+	 * Implementation of a simple filter shader that emulates PhysX 2.8.x filtering
+	 *
+	 * This shader provides the following logic:
+	 * - If one of the two filter objects is a trigger, the pair is acccepted and [PxPairFlag.eTRIGGER_DEFAULT] will be used for trigger reports
+	 * - Else, if the filter mask logic (see further below) discards the pair it will be suppressed ([PxFilterFlag.eSUPPRESS])
+	 * - Else, the pair gets accepted and collision response gets enabled ([PxPairFlag.eCONTACT_DEFAULT])
+	 *
+	 * Filter mask logic:
+	 * Given the two [PxFilterData] structures fd0 and fd1 of two collision objects, the pair passes the filter if the following
+	 * conditions are met:
+	 *
+	 * 	1) Collision groups of the pair are enabled
+	 * 	2) Collision filtering equation is satisfied
+	 *
+	 * Each actor can belong to a single collision group. Use PxSetGroup to set the group of an actor and PxGetGroup to retrieve the group of an actor.
+	 * A collision group is an integer value between 0 and 31 defining which group the actor belongs to. Because that value is written to an actor's
+	 * shapes internally (it is stored in the shapes' PxFilterData), this feature does not work with shared shapes, unless they all belong to actors
+	 * whose groups are similar. For example it would not work to share a shape between actors A and B, and then assign A to group 0 and B to group 1,
+	 * as they would both internally try to write different group values to the same shape.
+	 *
+	 * Once actors are assigned to groups, it is possible to define how groups collide with each-other using the PxSetGroupCollisionFlag function.
+	 * Use this function to set a simple boolean value per group pairs, defining if the corresponding groups should collide. If not, collisions between
+	 * actors of these non-colliding groups will be automatically disabled by the PxDefaultSimulationFilterShader.
+	 *
+	 * @see PxSimulationFilterShader
+	 * @see PxGetGroupCollisionFlag
+	 * @see PxSetGroupCollisionFlag
+	 * @see PxGetGroup
+	 * @see PxSetGroup
+	 */
+	fun pxDefaultSimulationFilterShader(
+		attributes0: Int,
+		filterData0: MemorySegment,
+		attributes1: Int,
+		filterData1: MemorySegment,
+		pairFlags: MemorySegment,
+		constantBlock: MemorySegment,
+		constantBlockSize: Int
+	): Short {
+		TODO("Ah")
+	}
 }

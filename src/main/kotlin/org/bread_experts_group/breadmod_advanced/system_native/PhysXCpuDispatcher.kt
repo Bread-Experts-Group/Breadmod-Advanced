@@ -1,3 +1,5 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
-class PhysXCpuDispatcher
+import java.lang.foreign.MemorySegment
+
+class PhysXCpuDispatcher internal constructor (override val segment: MemorySegment) : SegmentExposed

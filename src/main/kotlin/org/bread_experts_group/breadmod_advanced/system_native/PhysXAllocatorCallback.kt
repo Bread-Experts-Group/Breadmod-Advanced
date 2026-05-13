@@ -28,15 +28,8 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.int
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
-import org.bread_experts_group.ffi.nativeLinker
 import java.lang.foreign.Arena
-import java.lang.foreign.FunctionDescriptor
 import java.lang.foreign.MemorySegment
-import java.lang.foreign.ValueLayout
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
 
 /**
  * Abstract base class for an application defined memory allocator that can be used by the Nv library.
@@ -49,57 +42,42 @@ import java.lang.invoke.MethodType
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  */
-interface PhysXAllocatorCallback {
-	object Standard : PhysXAllocatorCallback {
+abstract class PhysXAllocatorCallback {
+	object Standard : PhysXAllocatorCallback() {
 		private val managed: MutableMap<MemorySegment, Arena> = mutableMapOf()
 
 		override fun allocate(
-			size: NativeSize,
+			self: MemorySegment,
+			size: Long,
 			typeName: MemorySegment,
 			fileName: MemorySegment,
 			line: Int
 		): MemorySegment {
 			val allocator = Arena.ofShared()
-			val size = when (size) {
-				is NativeSize.B64 -> size.value
-				is NativeSize.B32 -> size.value.toLong() and 0xFFFFFFFF
-			}
+//			val size = when (size) {
+//				is NativeSize.B64 -> size.value
+//				is NativeSize.B32 -> size.value.toLong() and 0xFFFFFFFF
+//			}
 			val segment = allocator.allocate(size)
 			this.managed[segment] = allocator
 			return segment
 		}
 
-		override fun deallocate(ptr: MemorySegment) {
+		override fun deallocate(
+			self: MemorySegment,
+			ptr: MemorySegment
+		) {
 			this.managed[ptr]?.close()
 		}
 	}
 
 	/**
-	 * Internal upcall to [destructor] for use by C++
-	 * @author Miko Elbrecht
-	 */
-	@Suppress("Unused")
-	private fun destructorUPCALL(self: MemorySegment) = this.destructor()
-
-	/**
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 */
-	fun destructor() {
+	@VirtualFunction(0)
+	open fun destructor(self: MemorySegment) {
 	}
-
-	/**
-	 * Internal upcall to [allocate] for use by C++ (64-bitness)
-	 * @author Miko Elbrecht
-	 */
-	@Suppress("Unused")
-	private fun allocateUPCALL64(
-		self: MemorySegment,
-		size: Long,
-		typeName: MemorySegment,
-		fileName: MemorySegment,
-		line: Int
-	): MemorySegment = this.allocate(NativeSize.B64(size), typeName, fileName, line)
 
 	/**
 	 * Allocates size bytes of memory, which must be 16-byte aligned.
@@ -120,22 +98,14 @@ interface PhysXAllocatorCallback {
 	 * @param line			The source line which allocated the memory
 	 * @return				The allocated block of memory.
 	 */
-	fun allocate(
-		size: NativeSize,
+	@VirtualFunction(1)
+	abstract fun allocate(
+		self: MemorySegment,
+		size: Long,
 		typeName: MemorySegment,
 		fileName: MemorySegment,
 		line: Int
 	): MemorySegment
-
-	/**
-	 * Internal upcall to [deallocate] for use by C++ (64-bitness)
-	 * @author Miko Elbrecht
-	 */
-	@Suppress("Unused")
-	private fun deallocateUPCALL(
-		self: MemorySegment,
-		ptr: MemorySegment
-	) = this.deallocate(ptr)
 
 	/**
 	 * Frees memory previously allocated by allocate().
@@ -149,59 +119,57 @@ interface PhysXAllocatorCallback {
 	 *
 	 * @param ptr Memory to free.
 	 */
-	fun deallocate(
+	@VirtualFunction(2)
+	abstract fun deallocate(
+		self: MemorySegment,
 		ptr: MemorySegment
 	)
 
-	/**
-	 * Allocates this structure into an [Arena] for native use.
-	 * @author Miko Elbrecht
-	 */
-	fun allocateStructure(arena: Arena): MemorySegment {
-		val structure = arena.allocate(`void*`)
-		val vtable = arena.allocate(`void*`, 3)
-		structure.setAtIndex(`void*`, 0, vtable)
-		val destructor = nativeLinker.upcallStub(
-			MethodHandles.lookup().findVirtual(
-				PhysXAllocatorCallback::class.java,
-				"destructorUPCALL",
-				MethodType.methodType(Void.TYPE, MemorySegment::class.java)
-			).bindTo(this),
-			FunctionDescriptor.ofVoid(`void*`),
-			arena
-		)
-		vtable.setAtIndex(`void*`, 0, destructor)
-		val allocate = nativeLinker.upcallStub( // TODO: detect bitness
-			MethodHandles.lookup().findVirtual(
-				PhysXAllocatorCallback::class.java,
-				"allocateUPCALL64",
-				MethodType.methodType(
-					MemorySegment::class.java,
-					MemorySegment::class.java, Long::class.java, MemorySegment::class.java,
-					MemorySegment::class.java, Int::class.java
-				)
-			).bindTo(this),
-			FunctionDescriptor.of(
-				`void*`,
-				`void*`, ValueLayout.JAVA_LONG, `void*`,
-				`void*`, int
-			),
-			arena
-		)
-		vtable.setAtIndex(`void*`, 1, allocate)
-		val deallocate = nativeLinker.upcallStub(
-			MethodHandles.lookup().findVirtual(
-				PhysXAllocatorCallback::class.java,
-				"deallocateUPCALL",
-				MethodType.methodType(
-					Void.TYPE,
-					MemorySegment::class.java, MemorySegment::class.java
-				)
-			).bindTo(this),
-			FunctionDescriptor.ofVoid(`void*`, `void*`),
-			arena
-		)
-		vtable.setAtIndex(`void*`, 2, deallocate)
-		return structure
-	}
+//	override fun allocateStructure(arena: Arena): MemorySegment {
+//		val structure = arena.allocate(`void*`)
+//		val vtable = arena.allocate(`void*`, 3)
+//		structure.setAtIndex(`void*`, 0, vtable)
+//		val destructor = nativeLinker.upcallStub(
+//			MethodHandles.lookup().findVirtual(
+//				PhysXAllocatorCallback::class.java,
+//				"destructorUPCALL",
+//				MethodType.methodType(Void.TYPE, MemorySegment::class.java)
+//			).bindTo(this),
+//			FunctionDescriptor.ofVoid(`void*`),
+//			arena
+//		)
+//		vtable.setAtIndex(`void*`, 0, destructor)
+//		val allocate = nativeLinker.upcallStub( // TODO: detect bitness
+//			MethodHandles.lookup().findVirtual(
+//				PhysXAllocatorCallback::class.java,
+//				"allocateUPCALL64",
+//				MethodType.methodType(
+//					MemorySegment::class.java,
+//					MemorySegment::class.java, Long::class.java, MemorySegment::class.java,
+//					MemorySegment::class.java, Int::class.java
+//				)
+//			).bindTo(this),
+//			FunctionDescriptor.of(
+//				`void*`,
+//				`void*`, ValueLayout.JAVA_LONG, `void*`,
+//				`void*`, int
+//			),
+//			arena
+//		)
+//		vtable.setAtIndex(`void*`, 1, allocate)
+//		val deallocate = nativeLinker.upcallStub(
+//			MethodHandles.lookup().findVirtual(
+//				PhysXAllocatorCallback::class.java,
+//				"deallocateUPCALL",
+//				MethodType.methodType(
+//					Void.TYPE,
+//					MemorySegment::class.java, MemorySegment::class.java
+//				)
+//			).bindTo(this),
+//			FunctionDescriptor.ofVoid(`void*`, `void*`),
+//			arena
+//		)
+//		vtable.setAtIndex(`void*`, 2, deallocate)
+//		return structure
+//	}
 }

@@ -29,18 +29,22 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.float
+import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.int32_t
+import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.uint16_t
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.uint32_t
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
 import org.bread_experts_group.generic.FlagSet
-import org.bread_experts_group.generic.numeric.geometry.point.Point3
 import java.lang.foreign.*
-import java.lang.foreign.MemoryLayout.PathElement.groupElement
-import java.lang.invoke.VarHandle
+import java.lang.invoke.MethodType
+
+typealias PxI32_t = Int
 
 typealias PxU8_t = UByte
+typealias PxU16_t = UShort
 typealias PxU32_t = UInt
 typealias PxU64_t = ULong
-typealias PxVec3_t = Point3<Float>
+typealias PxVec3_t = PxVec3T<Float>
+typealias PxVec3d_t = PxVec3T<Double>
 typealias PxReal_t = Float
 
 typealias CUevent = MemorySegment
@@ -97,26 +101,51 @@ typealias CUevent = MemorySegment
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-typealias PxSimulationFilterShader = (
-	attributes0: PhysXFilterObjectAttributes,
-	filterData0: PhysXFilterData,
-	attributes1: PhysXFilterObjectAttributes,
-	filterData1: PhysXFilterData,
-	pairFlags: Mutable<FlagSet<PxPairFlag>>,
-	constantBlock: MemorySegment
-) -> FlagSet<PxFilterFlag>
+val PxSimulationFilterShader = MethodType.methodType(
+	FlagSet::class.java,
+	PhysXFilterObjectAttributes::class.java,
+	PhysXFilterData::class.java,
+	PhysXFilterObjectAttributes::class.java,
+	PhysXFilterData::class.java,
+	Mutable::class.java,
+	MemorySegment::class.java
+)
 
+val PxI32: ValueLayout.OfInt = int32_t
+
+val PxU16: ValueLayout.OfShort = uint16_t
 val PxU32: ValueLayout.OfInt = uint32_t
 val PxReal: ValueLayout = float
 
 @Suppress("FloatingPointLiteralPrecision")
 val PX_MAX_F32: Float = 3.4028234663852885981170418348452e+38F
 
+val PX_MAX_REAL: Float = PX_MAX_F32
+val PX_MAX_BOUNDS_EXTENTS: Float = PX_MAX_REAL * 0.25f
+
+val PxPairFlags: ValueLayout.OfShort = PxU16
+
+val PxFilterObjectAttributes: ValueLayout.OfInt = PxU32
+
+val PxFilterData: StructLayout = MemoryLayout.structLayout(
+	PxU32.withName("word0"),
+	PxU32.withName("word1"),
+	PxU32.withName("word2"),
+	PxU32.withName("word3")
+)
+
 val PxFoundation: AddressLayout = `void*`
 val PxAllocatorCallback: AddressLayout = `void*`
 val PxErrorCallback: AddressLayout = `void*`
 
+val PxCudaContextManager: AddressLayout = `void*`
+val PxCudaContextManagerDesc: AddressLayout = `void*`
+val PxProfilerCallback: AddressLayout = `void*`
+val PxDefaultCpuDispatcher: AddressLayout = `void*`
+
 val PxPhysics: AddressLayout = `void*`
+
+val PxScene: AddressLayout = `void*`
 
 val PxPvd: AddressLayout = `void*`
 val PxPvdTransport: AddressLayout = `void*`
@@ -124,9 +153,6 @@ val PxPvdTransport: AddressLayout = `void*`
 val PxOmniPvd: AddressLayout = `void*`
 
 val PxTolerancesScale: StructLayout = MemoryLayout.structLayout(
-	float.withName("defaultLength"),
-	float.withName("defaultSpeed")
+	float.withName("length"),
+	float.withName("speed")
 )
-
-val `PxTolerancesScale defaultLength`: VarHandle = PxTolerancesScale.varHandle(groupElement("defaultLength"))
-val `PxTolerancesScale defaultSpeed`: VarHandle = PxTolerancesScale.varHandle(groupElement("defaultSpeed"))

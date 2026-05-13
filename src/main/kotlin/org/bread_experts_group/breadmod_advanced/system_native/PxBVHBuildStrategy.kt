@@ -29,51 +29,37 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
 /**
- * Class to define the scale at which simulation runs. Most simulation tolerances are
-   calculated in terms of the values here.
-
- * *if you change the simulation scale, you will probably also wish to change the scene's
-   default value of gravity, and stable simulation will probably require changes to the scene's
-   bounceThreshold also.*
-
+ * Desired build strategy for bounding-volume hierarchies
+ *
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-sealed class PhysXTolerancesScale {
-   /**
-    * The approximate size of objects in the simulation.
-    *
-    * For simulating roughly human-sized in metric units, 1 is a good choice.
-    * If simulation is done in centimetres, use 100 instead. This is used to
-    * estimate certain length-related tolerances.
+enum class PxBVHBuildStrategy {
+	/**
+	 * Fast build strategy. Fast build speed, good runtime performance in most cases. Recommended for runtime cooking.
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	eFAST,
 
-    * @author Miko Elbrecht (Kotlin)
-    * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-    * @since In accordance with PhysX 5.6.1
-    */
-   abstract val length: Float
-   /**
-    * The typical magnitude of velocities of objects in simulation. This is used to estimate
-    * whether a contact should be treated as bouncing or resting based on its impact velocity,
-    * and a kinetic energy threshold below which the simulation may put objects to sleep.
-    *
-    * For normal physical environments, a good choice is the approximate speed of an object falling
-    * under gravity for one second.
+	/**
+	 * Default build strategy. Medium build speed, good runtime performance in all cases.
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	eDEFAULT,
 
-    * @author Miko Elbrecht (Kotlin)
-    * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-    * @since In accordance with PhysX 5.6.1
-    */
-   abstract val speed: Float
-
-   abstract class ReadOnly : PhysXTolerancesScale() {
-      @DefinedProperty(0) abstract override val length: Float
-      @DefinedProperty(1) abstract override val speed: Float
-   }
-
-   open class ReadWrite : PhysXTolerancesScale() {
-      @DefinedProperty(0) override var length: Float = 1f
-      @DefinedProperty(1) override var speed: Float = 10f
-   }
+	/**
+	 * SAH build strategy. Slower builds, slightly improved runtime performance in some cases.
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	eSAH
 }

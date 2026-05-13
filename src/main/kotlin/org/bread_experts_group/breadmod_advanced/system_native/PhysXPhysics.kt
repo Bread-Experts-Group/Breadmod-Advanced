@@ -28,12 +28,7 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.ptr
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
-import org.bread_experts_group.ffi.getDowncallVoid
-import java.lang.foreign.Linker
 import java.lang.foreign.MemorySegment
-import java.lang.invoke.MethodHandle
 
 /**
  * Abstract singleton factory class used for instancing objects in the Physics SDK.
@@ -47,19 +42,11 @@ import java.lang.invoke.MethodHandle
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  *
- * @see [PhysXLibrary.pxCreatePhysics] [PhysXScene]
+ * @see PhysXLibrary.pxCreatePhysics
+ * @see PhysXScene
  */
-class PhysXPhysics internal constructor(linker: Linker, private val segment: MemorySegment) {
-	private val release: MethodHandle
-
-	init {
-		val vtable = segment.reinterpret(`void*`.byteSize()).get(`void*`, 0)
-			.reinterpret(`void*`.byteSize() * 64)
-		release = vtable.getAtIndex(`void*`, 1).getDowncallVoid(
-			linker,
-			PxFoundation.ptr.withName("self")
-		)
-	}
+abstract class PhysXPhysics {
+	@VirtualFunction(0) abstract fun destructorPhysXPhysics()
 
 	/**
 	 * Destroys the instance it is called on.
@@ -84,7 +71,53 @@ class PhysXPhysics internal constructor(linker: Linker, private val segment: Mem
 	 * @see PhysXFoundation
 	 * @see PhysXLibrary.pxCreatePhysics
 	 */
-	fun release() {
-		this.release.invokeExact(segment)
-	}
+	@VirtualFunction(1) abstract fun release()
+	@VirtualFunction(2) abstract fun fTODO2() // getFoundation
+	@VirtualFunction(3) abstract fun fTODO3() // getPhysicsInsertionCallback
+	@VirtualFunction(4) abstract fun fTODO4() // getOmniPvd
+
+			/**
+	 * Returns the simulation tolerance parameters.
+	 * @return The current simulation tolerance parameters.
+	 *
+	 * @since In accordance with PhysX 5.6.1
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 */
+	@VirtualFunction(5) abstract fun getTolerancesScale(): PhysXTolerancesScale.ReadOnly
+	@VirtualFunction(6) abstract fun fTODO6() // createAggregate
+	@VirtualFunction(7) abstract fun fTODO7() // getNbAggregates
+	@VirtualFunction(8) abstract fun fTODO8() // createTriangleMesh
+	@VirtualFunction(9) abstract fun fTODO9() // getNbTriangleMeshes
+	@VirtualFunction(10) abstract fun fTODO10() // getTriangleMeshes
+	@VirtualFunction(11) abstract fun fTODO11() // createTetrahedronMesh
+	@VirtualFunction(12) abstract fun fTODO12() // getNbTetrahedronMeshes
+	@VirtualFunction(13) abstract fun fTODO13() // getTetrahedronMeshes
+	@VirtualFunction(14) abstract fun fTODO14() // createHeightField
+	@VirtualFunction(15) abstract fun fTODO15() // getNbHeightFields
+	@VirtualFunction(16) abstract fun fTODO16() // getHeightFields
+	@VirtualFunction(17) abstract fun fTODO17() // createConvexMesh
+	@VirtualFunction(18) abstract fun fTODO18() // getNbConvexMeshes
+	@VirtualFunction(19) abstract fun fTODO19() // getConvexMeshes
+	@VirtualFunction(20) abstract fun fTODO20() // createDeformableVolumeMesh
+	@VirtualFunction(21) abstract fun fTODO21() // createBVH
+	@VirtualFunction(22) abstract fun fTODO22() // getNbBVHs
+	@VirtualFunction(23) abstract fun fTODO23() // getBVHs
+
+	/**
+	 * Creates a scene.
+	 *
+	 * *Every scene uses a Thread Local Storage slot. This imposes a platform specific limit on the
+	 * number of scenes that can be created.*
+	 *
+	 * @param sceneDesc	Scene descriptor. See [PhysXSceneDesc]
+	 * @return The new scene object.
+	 *
+	 * @see PhysXScene
+	 * @see PhysXScene.release
+	 * @see PhysXSceneDesc
+	 */
+	@VirtualFunction(24) abstract fun createScene(sceneDesc: MemorySegment): MemorySegment // createScene
+	@VirtualFunction(25) abstract fun fTODO25() // getNbScenes
+	@VirtualFunction(26) abstract fun fTODO26() // getScenes
 }

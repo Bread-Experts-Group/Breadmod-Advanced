@@ -23,86 +23,89 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Copyright (c) 2008-2025 NVIDIA Corporation. All rights reserved.
-// Copyright (c) 2004-2008 AGEIA Technologies, Inc. All rights reserved.
-// Copyright (c) 2001-2004 NovodeX AG. All rights reserved.
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
+import java.lang.foreign.MemorySegment
+
 /**
- * Class used to retrieve limits(e.g. maximum number of bodies) for a scene. The limits
- * are used as a hint to the size of the scene, not as a hard limit (i.e. it will be possible
- * to create more objects than specified in the scene limits).
- *
- * 0 indicates no limit. Using limits allows the SDK to preallocate various arrays, leading to
- * less re-allocations and faster code at runtime.
- *
+ * Descriptor used to create a [PxCudaContextManager]
+
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-data class PxSceneLimits(
+data class PhysXCudaContextManagerDesc(
 	/**
-	 * Expected maximum number of actors
+	 * The CUDA context to manage
 	 *
+	 * If left NULL, the [PhysXCudaContextManager] will create a new context.  If
+	 * graphicsDevice is also not NULL, this new CUDA context will be bound to
+	 * that graphics device, enabling the use of CUDA/Graphics interop features.
+	 *
+	 * If ctx is not NULL, the specified context must be applied to the thread
+	 * that is allocating the [PhysXCudaContextManager] at creation time (aka, it
+	 * cannot be popped).  The [PhysXCudaContextManager] will take ownership of the
+	 * context until the manager is released.  All access to the context must be
+	 * gated by lock acquisition.
+	 *
+	 * If the user provides a context for the [PhysXCudaContextManager], the context
+	 * _must_ have either been created on the GPU ordinal returned by
+	 * [PxGetSuggestedCudaDeviceOrdinal] or on your graphics device.
+
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(0) val maxNbActors: PxU32_t = 0u,
+	@DefinedProperty(0) var ctx: MemorySegment = MemorySegment.NULL,
 	/**
-	 * Expected maximum number of dynamic rigid bodies
+	 * D3D device pointer or OpenGl context handle
 	 *
+	 * Only applicable when ctx is NULL, thus forcing a new context to be
+	 * created.  In that case, the created context will be bound to this
+	 * graphics device.
+
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(1) val maxNbBodies: PxU32_t = 0u,
+	@DefinedProperty(1) var graphicsDevice: MemorySegment = MemorySegment.NULL,
 	/**
-	 * Expected maximum number of static shapes
+	 * CUDA device ordinal
 	 *
+	 * Only applicable when ctx is NULL, thus forcing a new context to be created based on the CUDA device ordinal.
+	 * The first CUDA device will have an ordinal value of 0 and so on.
+	 * If the CUDA device ordinal is -1, the device selected will be queried from the environment variable PHYSX_GPU_DEVICE.
+	 *
+	 * *If the environment variable PHYSX_GPU_DEVICE is not found, the CUDA device ordinal will default to 0.*
+
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(2) val maxNbStaticShapes: PxU32_t = 0u,
+	@DefinedProperty(2) var deviceOrdinal: PxI32_t = -1,
 	/**
-	 * Expected maximum number of dynamic shapes
+	 * Application-specific GUID
 	 *
+	 * If your application employs PhysX modules that use CUDA you need to use a GUID
+	 * so that patches for new architectures can be released for your game.You can obtain a GUID for your
+	 * application from Nvidia.
+
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(3) val maxNbDynamicShapes: PxU32_t = 0u,
+	@DefinedProperty(3) var appGUID: MemorySegment = MemorySegment.NULL,
 	/**
-	 * Expected maximum number of aggregates
+	 *  Application-specific device memory allocator
 	 *
+	 * the application can implement an device memory allocator, which inherites [PhysXDeviceAllocatorCallback], and
+	 * pass that to the [PhysXCudaContextManagerDesc]. The SDK will use that allocator to allocate device memory instead of
+	 * using the defaul CUDA device memory allocator.
+
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(4) val maxNbAggregates: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of constraint shaders
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(5) val maxNbConstraints: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of broad-phase regions
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(6) val maxNbRegions: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of broad-phase overlaps
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(7) val maxNbBroadPhaseOverlaps: PxU32_t = 0u
+	@DefinedProperty(4) var deviceAllocator: MemorySegment = MemorySegment.NULL
 )

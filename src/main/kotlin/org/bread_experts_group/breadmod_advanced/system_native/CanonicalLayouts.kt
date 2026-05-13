@@ -22,6 +22,9 @@ object CanonicalLayouts {
 	val int8_t: ValueLayout.OfByte
 	val uint8_t: ValueLayout.OfByte
 
+	val int16_t: ValueLayout.OfShort
+	val uint16_t: ValueLayout.OfShort
+
 	val int32_t: ValueLayout.OfInt
 	val uint32_t: ValueLayout.OfInt
 
@@ -50,6 +53,10 @@ object CanonicalLayouts {
 		else if (this.char is ValueLayout.OfByte) this.int8_t = this.char
 		else throw IllegalStateException("No suitable C types for int8.")
 		this.uint8_t = this.int8_t
+
+		if (this.short is ValueLayout.OfShort) this.int16_t = this.short
+		else throw IllegalStateException("No suitable C types for int16.")
+		this.uint16_t = this.int16_t
 
 		if (this.int is ValueLayout.OfInt) this.int32_t = this.int
 		else if (this.long is ValueLayout.OfInt) this.int32_t = this.long

@@ -29,80 +29,54 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
 /**
- * Class used to retrieve limits(e.g. maximum number of bodies) for a scene. The limits
- * are used as a hint to the size of the scene, not as a hard limit (i.e. it will be possible
- * to create more objects than specified in the scene limits).
+ * Scene query update mode
  *
- * 0 indicates no limit. Using limits allows the SDK to preallocate various arrays, leading to
- * less re-allocations and faster code at runtime.
+ * This enum controls what work is done when the scene query system is updated. The updates traditionally happen when [PhysXScene.fetchResults]
+ * is called. This function then calls [PxSceneQuerySystem.finalizeUpdates], where the update mode is used.
+ *
+ * fetchResults/finalizeUpdates will sync changed bounds during simulation and update the scene query bounds in pruners, this work is mandatory.
+ *
+ * [eBUILD_ENABLED_COMMIT_ENABLED] does allow to execute the new AABB tree build step during fetchResults/finalizeUpdates, additionally
+ * the pruner commit is called where any changes are applied. During commit PhysX refits the dynamic scene query tree and if a new tree
+ * was built and the build finished the tree is swapped with current AABB tree.
+ *
+ * [eBUILD_ENABLED_COMMIT_DISABLED] does allow to execute the new AABB tree build step during fetchResults/finalizeUpdates. Pruner commit
+ * is not called, this means that refit will then occur during the first scene query following fetchResults/finalizeUpdates, or may be forced
+ * by the method [PhysXScene.flushQueryUpdates] / [PxSceneQuerySystemBase.flushUpdates].
+ *
+ * [eBUILD_DISABLED_COMMIT_DISABLED] no further scene query work is executed. The scene queries update needs to be called manually, see
+ * [PxScene.sceneQueriesUpdate] (see that function's doc for the equivalent [PxSceneQuerySystem] sequence). It is recommended to call
+ * [PxScene.sceneQueriesUpdate] right after fetchResults/finalizeUpdates as the pruning structures are not updated.
  *
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-data class PxSceneLimits(
+enum class PxSceneQueryUpdateMode {
 	/**
-	 * Expected maximum number of actors
+	 * Both scene query build and commit are executed.
 	 *
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(0) val maxNbActors: PxU32_t = 0u,
+	eBUILD_ENABLED_COMMIT_ENABLED,
+
 	/**
-	 * Expected maximum number of dynamic rigid bodies
+	 * Scene query build only is executed.
 	 *
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(1) val maxNbBodies: PxU32_t = 0u,
+	eBUILD_ENABLED_COMMIT_DISABLED,
+
 	/**
-	 * Expected maximum number of static shapes
+	 * No work is done, no update of scene queries
 	 *
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(2) val maxNbStaticShapes: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of dynamic shapes
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(3) val maxNbDynamicShapes: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of aggregates
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(4) val maxNbAggregates: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of constraint shaders
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(5) val maxNbConstraints: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of broad-phase regions
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(6) val maxNbRegions: PxU32_t = 0u,
-	/**
-	 * Expected maximum number of broad-phase overlaps
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	@DefinedProperty(7) val maxNbBroadPhaseOverlaps: PxU32_t = 0u
-)
+	eBUILD_DISABLED_COMMIT_DISABLED
+}

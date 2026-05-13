@@ -30,16 +30,7 @@ package org.bread_experts_group.breadmod_advanced.system_native
 
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.Logger
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.int
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
-import org.bread_experts_group.ffi.nativeLinker
-import org.bread_experts_group.generic.Flaggable.Companion.from
-import java.lang.foreign.Arena
-import java.lang.foreign.FunctionDescriptor
 import java.lang.foreign.MemorySegment
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
-import java.util.*
 
 /**
  * User defined interface class.
@@ -53,45 +44,29 @@ be implemented in a thread-safe manner if the SDK is the only client.
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  */
-interface PhysXErrorCallback {
-	class Standard(private val logger: Logger) : PhysXErrorCallback {
-		override fun reportError(code: EnumSet<PxErrorCode>, message: MemorySegment, file: MemorySegment, line: Int) {
+abstract class PhysXErrorCallback {
+	class Standard(private val logger: Logger) : PhysXErrorCallback() {
+		override fun reportError(
+			self: MemorySegment,
+			code: PxErrorCode,
+			message: MemorySegment,
+			file: MemorySegment,
+			line: Int
+		) {
 			if (logger.level < Level.ERROR) return
 			val fileName = file.reinterpret(Long.MAX_VALUE).getString(0, Charsets.UTF_8)
 			val message = message.reinterpret(Long.MAX_VALUE).getString(0, Charsets.UTF_8)
-			logger.error("[${code.joinToString(", ")}] @ $fileName:$line: \"$message\"")
+			logger.error("[${code}] @ $fileName:$line: \"$message\"")
 		}
 	}
-
-	/**
-	 * Internal upcall to [destructor] for use by C++
-	 * @author Miko Elbrecht
-	 */
-	@Suppress("Unused")
-	private fun destructorUPCALL(self: MemorySegment) = this.destructor()
 
 	/**
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 */
-	fun destructor() {
+	@VirtualFunction(0)
+	open fun destructor(self: MemorySegment) {
 	}
-
-	/**
-	 * Internal upcall to [reportError] for use by C++
-	 * @author Miko Elbrecht
-	 */
-	@Suppress("Unused")
-	private fun reportErrorUPCALL(
-		self: MemorySegment,
-		code: Int,
-		message: MemorySegment,
-		file: MemorySegment,
-		line: Int
-	) = this.reportError(
-		PxErrorCode.entries.from(code),
-		message, file, line
-	)
 
 	/**
 	 * Reports an error code.
@@ -103,45 +78,43 @@ interface PhysXErrorCallback {
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	*/
-	fun reportError(
-		code: EnumSet<PxErrorCode>,
+	@VirtualFunction(1)
+	abstract fun reportError(
+		self: MemorySegment,
+		code: PxErrorCode,
 		message: MemorySegment,
 		file: MemorySegment,
 		line: Int
 	)
 
-	/**
-	 * Allocates this structure into an [Arena] for native use.
-	 * @author Miko Elbrecht
-	 */
-	fun allocateStructure(arena: Arena): MemorySegment {
-		val structure = arena.allocate(`void*`)
-		val vtable = arena.allocate(`void*`, 2)
-		structure.setAtIndex(`void*`, 0, vtable)
-		val destructor = nativeLinker.upcallStub(
-			MethodHandles.lookup().findVirtual(
-				PhysXErrorCallback::class.java,
-				"destructorUPCALL",
-				MethodType.methodType(Void.TYPE, MemorySegment::class.java)
-			).bindTo(this),
-			FunctionDescriptor.ofVoid(`void*`),
-			arena
-		)
-		vtable.setAtIndex(`void*`, 0, destructor)
-		val reportError = nativeLinker.upcallStub(
-			MethodHandles.lookup().findVirtual(
-				PhysXErrorCallback::class.java,
-				"reportErrorUPCALL",
-				MethodType.methodType(
-					Void.TYPE,
-					MemorySegment::class.java, Int::class.java,
-					MemorySegment::class.java, MemorySegment::class.java, Int::class.java
-				)
-			).bindTo(this),
-			FunctionDescriptor.ofVoid(`void*`, int, `void*`, `void*`, int),
-			arena
-		)
-		vtable.setAtIndex(`void*`, 1, reportError)
-		return structure
-	}
+//	override fun allocateStructure(arena: Arena): MemorySegment {
+//		val structure = arena.allocate(`void*`)
+//		val vtable = arena.allocate(`void*`, 2)
+//		structure.setAtIndex(`void*`, 0, vtable)
+//		val destructor = nativeLinker.upcallStub(
+//			MethodHandles.lookup().findVirtual(
+//				PhysXErrorCallback::class.java,
+//				"destructorUPCALL",
+//				MethodType.methodType(Void.TYPE, MemorySegment::class.java)
+//			).bindTo(this),
+//			FunctionDescriptor.ofVoid(`void*`),
+//			arena
+//		)
+//		vtable.setAtIndex(`void*`, 0, destructor)
+//		val reportError = nativeLinker.upcallStub(
+//			MethodHandles.lookup().findVirtual(
+//				PhysXErrorCallback::class.java,
+//				"reportErrorUPCALL",
+//				MethodType.methodType(
+//					Void.TYPE,
+//					MemorySegment::class.java, Int::class.java,
+//					MemorySegment::class.java, MemorySegment::class.java, Int::class.java
+//				)
+//			).bindTo(this),
+//			FunctionDescriptor.ofVoid(`void*`, int, `void*`, `void*`, int),
+//			arena
+//		)
+//		vtable.setAtIndex(`void*`, 1, reportError)
+//		return structure
+//	}
 }

@@ -38,12 +38,14 @@ import java.lang.foreign.SymbolLookup
 import java.lang.invoke.MethodHandle
 
 class PhysXFoundationLibrary private constructor(
+	private val linker: Linker,
 	private val pxCreateFoundation: MethodHandle
 ) {
 	constructor(
 		lookup: SymbolLookup,
 		linker: Linker,
 	) : this(
+		linker,
 		lookup.getDowncall(
 			linker, "PxCreateFoundation", `void*`,
 			PxU32.withName("version"),
@@ -70,13 +72,13 @@ class PhysXFoundationLibrary private constructor(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 */
 	fun pxCreateFoundation(
-		linker: Linker, arena: Arena,
+		arena: Arena,
 		version: PxU32_t, allocator: PhysXAllocatorCallback, errorCallback: PhysXErrorCallback
 	): PhysXFoundation? {
 		val segment = pxCreateFoundation.invokeExact(
 			version.toInt(),
-			allocator.allocateStructure(arena),
-			errorCallback.allocateStructure(arena)
+			cppAnalyze(allocator).allocate(arena, linker),
+			cppAnalyze(errorCallback).allocate(arena, linker)
 		) as MemorySegment
 		if (segment == MemorySegment.NULL) return null
 		return PhysXFoundation(linker, segment)

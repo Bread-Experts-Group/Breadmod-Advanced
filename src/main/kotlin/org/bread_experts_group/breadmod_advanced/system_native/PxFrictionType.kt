@@ -29,51 +29,32 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
 /**
- * Class to define the scale at which simulation runs. Most simulation tolerances are
-   calculated in terms of the values here.
-
- * *if you change the simulation scale, you will probably also wish to change the scene's
-   default value of gravity, and stable simulation will probably require changes to the scene's
-   bounceThreshold also.*
-
+ * Enum for selecting the friction algorithm used for simulation.
+ *
+ * [PxFrictionType.ePATCH] is the default friction logic (Couloumb type friction model). Friction gets computed per contact patch.
+ * Up to two contact points lying in the contact patch area are selected as friction anchors to which friction impulses are applied. If there
+ * are more than two contact points, to select anchors from, the anchors are selected using a heuristic that tries to maximize the distance
+ * between the anchors within the contact patch area. For each contact patch, two perpendicular axes of the contact patch plane are selected.
+ * A 1D-constraint along each of the two axes is used to implement friction at a friction anchor point. Note that the two axes are processed
+ * separately when the PGS solver type is selected. This can lead to asymmetries when transitioning from dynamic to static friction and vice
+ * versa in certain edge cases. The TGS solver type, on the other hand, works with the combined impulse along the two axes and as such avoids
+ * this potential problem, but this is slightly more computationally expensive. Another difference between TGS and PGS is that TGS applies
+ * friction throughout all position and all velocity iterations, while PGS by default applies friction throughout the last 3 position iterations
+ * and all velocity iterations (unless [PxSceneFlag.eENABLE_FRICTION_EVERY_ITERATION] is used).
+ *
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-sealed class PhysXTolerancesScale {
-   /**
-    * The approximate size of objects in the simulation.
-    *
-    * For simulating roughly human-sized in metric units, 1 is a good choice.
-    * If simulation is done in centimetres, use 100 instead. This is used to
-    * estimate certain length-related tolerances.
-
-    * @author Miko Elbrecht (Kotlin)
-    * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-    * @since In accordance with PhysX 5.6.1
-    */
-   abstract val length: Float
-   /**
-    * The typical magnitude of velocities of objects in simulation. This is used to estimate
-    * whether a contact should be treated as bouncing or resting based on its impact velocity,
-    * and a kinetic energy threshold below which the simulation may put objects to sleep.
-    *
-    * For normal physical environments, a good choice is the approximate speed of an object falling
-    * under gravity for one second.
-
-    * @author Miko Elbrecht (Kotlin)
-    * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-    * @since In accordance with PhysX 5.6.1
-    */
-   abstract val speed: Float
-
-   abstract class ReadOnly : PhysXTolerancesScale() {
-      @DefinedProperty(0) abstract override val length: Float
-      @DefinedProperty(1) abstract override val speed: Float
-   }
-
-   open class ReadWrite : PhysXTolerancesScale() {
-      @DefinedProperty(0) override var length: Float = 1f
-      @DefinedProperty(1) override var speed: Float = 10f
-   }
+@Suppress("EnumEntryName")
+@Deprecated("Since only the patch friction model is supported now, the friction type option is obsolete.")
+enum class PxFrictionType {
+	/**
+	 * Select default patch-friction model
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	ePATCH
 }
