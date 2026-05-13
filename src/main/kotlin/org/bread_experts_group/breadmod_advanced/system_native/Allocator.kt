@@ -120,6 +120,7 @@ fun <T : Any> cppAnalyze(
 	}
 }
 
+@Suppress("unused")
 object AllocatorAnchor {
 	@JvmStatic
 	fun layout(clazz: Class<*>): MemoryLayout = clazz.layout
@@ -139,6 +140,7 @@ val Class<*>.layout: MemoryLayout
 		Float::class.java, java.lang.Float::class.java -> ValueLayout.JAVA_FLOAT
 		Int::class.java, Integer::class.java -> ValueLayout.JAVA_INT
 		Short::class.java, java.lang.Short::class.java -> ValueLayout.JAVA_SHORT
+		Byte::class.java, java.lang.Byte::class.java -> ValueLayout.JAVA_BYTE
 		Boolean::class.java -> ValueLayout.JAVA_BOOLEAN
 		else if this.isEnum -> int // TODO: Could be another type if larger
 		else -> throw IllegalArgumentException("Unsupported type $this")
@@ -146,7 +148,7 @@ val Class<*>.layout: MemoryLayout
 
 fun composeUpcall(
 	arena: Arena, linker: Linker,
-	handle: MethodHandle, method: Method? = null
+	handle: MethodHandle//, method: Method? = null
 ): MemorySegment {
 	val type = handle.type()
 	val parameterTypes = type.parameterArray()
@@ -216,7 +218,7 @@ fun ObjectAnalysis<*>.allocate(
 		for (method in this.vtable) {
 			val linked = composeUpcall(
 				arena, linker,
-				getPublicMethodHandle(method, this.of), method
+				getPublicMethodHandle(method, this.of)
 			)
 			vtbl.setAtIndex(`void*`, i++, linked)
 		}
@@ -608,7 +610,7 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 			}
 		}
 		var offset = if (implementingMethods.isNotEmpty()) `void*`.byteSize() else 0L
-		for ((index, implement) in implementingProperties) {
+		for ((_, implement) in implementingProperties) {
 			val jG = implement.javaGetter!!
 			builder.withMethodBody(
 				jG.name,

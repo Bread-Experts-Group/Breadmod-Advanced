@@ -147,6 +147,10 @@ val PxPhysics: AddressLayout = `void*`
 
 val PxScene: AddressLayout = `void*`
 
+val PxRigidStatic: AddressLayout = `void*`
+val PxPlane: AddressLayout = `void*`
+val PxMaterial: AddressLayout = `void*`
+
 val PxPvd: AddressLayout = `void*`
 val PxPvdTransport: AddressLayout = `void*`
 

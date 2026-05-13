@@ -43,6 +43,7 @@ import java.lang.invoke.MethodHandle
 class PhysXLibrary private constructor(
 	private val pxCreateCudaContextManager: MethodHandle,
 	private val pxCreatePhysics: MethodHandle,
+	private val pxCreatePlane: MethodHandle,
 	private val pxCreatePvd: MethodHandle,
 	private val pxDefaultCpuDispatcherCreate: MethodHandle,
 	private val pxDefaultPvdSocketTransportCreate: MethodHandle,
@@ -69,6 +70,12 @@ class PhysXLibrary private constructor(
 			bool.withName("trackOutstandingAllocations"),
 			PxPvd.ptr.withName("pvd"),
 			PxOmniPvd.ptr.withName("omniPvd"),
+		)!!,
+		lookup.getDowncall(
+			linker, "PxCreatePlaneBM", PxRigidStatic.ptr,
+			PxPhysics.ptr.withName("sdk"),
+			PxPlane.ptr.withName("plane"),
+			PxMaterial.ptr.withName("material")
 		)!!,
 		lookup.getDowncall(
 			linker, "PxCreatePvd", PxPvd.ptr,
@@ -170,7 +177,7 @@ class PhysXLibrary private constructor(
 		trackOutstandingAllocations: Boolean = false,
 		pvd: PhysXPvd? = null,
 		omniPvd: PhysXOmniPvd? = null
-	): PhysXPhysics? {
+	): MemorySegment? {
 		val physics = pxCreatePhysics.invokeExact(
 			version.toInt(),
 			foundation.segment,
@@ -180,7 +187,32 @@ class PhysXLibrary private constructor(
 			omniPvd?.segment ?: MemorySegment.NULL
 		) as MemorySegment
 		if (physics == MemorySegment.NULL) return null
-		return PhysXPhysics::class.java.image(linker, physics)
+		return physics
+	}
+
+	/**
+	 * create a plane actor. The plane equation is n.x + d = 0
+	 *
+	 * @param sdk the PxPhysics object
+	 * @param plane a plane of the form n.x + d = 0
+	 * @param material the material for the new object's shape
+	 *
+	 * @return a new static actor, or NULL if it could not be constructed
+	 *
+	 * @see PhysXRigidStatic
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	fun pxCreatePlane(sdk: MemorySegment, plane: MemorySegment, material: MemorySegment): MemorySegment? {
+		val planePtr = pxCreatePlane.invokeExact(
+			sdk,
+			plane,
+			material
+		) as MemorySegment
+		if (planePtr == MemorySegment.NULL) return null
+		return planePtr
 	}
 
 	/**
