@@ -43,9 +43,11 @@ typealias PxU8_t = UByte
 typealias PxU16_t = UShort
 typealias PxU32_t = UInt
 typealias PxU64_t = ULong
-typealias PxVec3_t = PxVec3T<Float>
-typealias PxVec3d_t = PxVec3T<Double>
+typealias PxVec3_t = PhysXVec3T<Float>
+typealias PxVec3d_t = PhysXVec3T<Double>
 typealias PxReal_t = Float
+typealias PxQuat_t = PhysXQuatT<Float>
+typealias PxTransform_t = PhysXTransformT<Float>
 
 typealias CUevent = MemorySegment
 
@@ -124,6 +126,7 @@ val PX_MAX_REAL: Float = PX_MAX_F32
 val PX_MAX_BOUNDS_EXTENTS: Float = PX_MAX_REAL * 0.25f
 
 val PxPairFlags: ValueLayout.OfShort = PxU16
+val PxFilterFlags: ValueLayout.OfShort = PxU16
 
 val PxFilterObjectAttributes: ValueLayout.OfInt = PxU32
 

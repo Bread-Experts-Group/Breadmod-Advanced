@@ -1,4 +1,3 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
-abstract class PhysXShape : PhysXRefCounted() {
-}
+abstract class PhysXRigidStatic : PhysXRigidActor()

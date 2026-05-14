@@ -193,5 +193,5 @@ interface PhysXSimulationEventCallback {
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	fun onAdvance(bodyBuffer: Array<PhysXRigidBody>, poseBuffer: Array<PhysXTransform>)
+	fun onAdvance(bodyBuffer: Array<PhysXRigidBody>, poseBuffer: Array<PxTransform_t>)
 }

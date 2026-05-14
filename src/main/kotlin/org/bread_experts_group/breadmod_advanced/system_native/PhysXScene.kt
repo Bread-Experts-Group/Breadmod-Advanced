@@ -73,7 +73,7 @@ abstract class PhysXScene : PhysXSceneSQSystem() {
 	@VirtualFunction(8) abstract fun fTODO9() // getName
 	@VirtualFunction(9) abstract fun fTODO10() // addArticulation
 	@VirtualFunction(10) abstract fun fTODO11() // removeArticulation
-	@VirtualFunction(11) abstract fun addActor(actor: MemorySegment, bvh: MemorySegment = MemorySegment.NULL): Boolean
+	@VirtualFunction(11) abstract fun addActor(actor: PhysXActor, bvh: MemorySegment = MemorySegment.NULL): Boolean
 	@VirtualFunction(12) abstract fun fTODO13() // addActors
 	@VirtualFunction(13) abstract fun fTODO14() // addActors
 	@VirtualFunction(14) abstract fun fTODO15() // removeActor

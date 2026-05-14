@@ -28,6 +28,7 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
+import org.bread_experts_group.breadmod_advanced.system_native.AllocatorAnchor.cppAnalyze
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.ptr
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
 import org.bread_experts_group.ffi.getDowncall

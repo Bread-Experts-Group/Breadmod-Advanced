@@ -28,7 +28,10 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
+import org.bread_experts_group.generic.FlagSet
+import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
+import java.lang.foreign.ValueLayout
 
 /**
  * Abstract singleton factory class used for instancing objects in the Physics SDK.
@@ -121,12 +124,74 @@ abstract class PhysXPhysics {
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 */
-	@VirtualFunction(24) abstract fun createScene(sceneDesc: MemorySegment): MemorySegment // createScene
+	@VirtualFunction(24) abstract fun createScene(sceneDesc: PhysXSceneDesc): PhysXScene
 	@VirtualFunction(25) abstract fun fTODO25() // getNbScenes
 	@VirtualFunction(26) abstract fun fTODO26() // getScenes
-	@VirtualFunction(27) abstract fun fTODO27() // createRigidStatic
-	@VirtualFunction(28) abstract fun fTODO28() // createRigidDynamic
+
+	/**
+	 * Creates a static rigid actor with the specified pose and all other fields initialized
+	 * to their default values.
+	 *
+	 * @param pose	The initial pose of the actor. Must be a valid transform.
+	 *
+	 * @see PhysXRigidStatic
+	 *
+	 * @since In accordance with PhysX 5.6.1
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 */
+	@VirtualFunction(27) abstract fun createRigidStatic(pose: PxTransform_t): PhysXRigidStatic
+
+	/**
+	 * Creates a dynamic rigid actor with the specified pose and all other fields initialized
+	 * to their default values.
+	 *
+	 * @param pose	The initial pose of the actor. Must be a valid transform.
+	 *
+	 * @see PhysXRigidDynamic
+	 *
+	 * @since In accordance with PhysX 5.6.1
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 */
+	@VirtualFunction(28) abstract fun createRigidDynamic(pose: PxTransform_t): PhysXRigidDynamic
 	@VirtualFunction(29) abstract fun fTODO29() // createPruningStructure
+
+	/**
+	 * Creates a shape which may be attached to multiple actors
+	 *
+	 * The shape will be created with a reference count of 1.
+	 *
+	 * @param geometry		The geometry for the shape
+	 * @param material		The material for the shape
+	 * @param isExclusive	Whether this shape is exclusive to a single actor or maybe be shared
+	 * @param shapeFlags	The PxShapeFlags to be set
+	 * @return The shape
+	 *
+	 * *Shared shapes are not mutable when they are attached to an actor*
+	 *
+	 * @see PhysXShape
+	 *
+	 * @since In accordance with PhysX 5.6.1
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 */
+	fun createShape(
+		geometry: PhysXGeometry,
+		material: MemorySegment,
+		isExclusive: Boolean = false,
+		shapeFlags: PxShapeFlags = PxShapeFlags.ReadWrite(
+			FlagSet.of(
+				PxShapeFlag.eVISUALIZATION,
+				PxShapeFlag.eSCENE_QUERY_SHAPE,
+				PxShapeFlag.eSIMULATION_SHAPE
+			).maskB.toUByte()
+		)
+	): PhysXShape = Arena.ofConfined().use { tempArena ->
+		val materialPtr = tempArena.allocate(ValueLayout.ADDRESS, 1)
+		materialPtr.set(ValueLayout.ADDRESS, 0, material)
+		this.createShape(geometry, materialPtr, 1u, isExclusive, shapeFlags)
+	}
 
 	/**
 	 * Creates a shape which may be attached to multiple actors
@@ -150,12 +215,18 @@ abstract class PhysXPhysics {
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 */
 	@VirtualFunction(32) abstract fun createShape(
-		geometry: MemorySegment,
+		geometry: PhysXGeometry,
 		materials: MemorySegment,
 		materialCount: PxU16_t,
 		isExclusive: Boolean = false,
-		shapeFlags: MemorySegment
-	): MemorySegment
+		shapeFlags: PxShapeFlags = PxShapeFlags.ReadWrite(
+			FlagSet.of(
+				PxShapeFlag.eVISUALIZATION,
+				PxShapeFlag.eSCENE_QUERY_SHAPE,
+				PxShapeFlag.eSIMULATION_SHAPE
+			).maskB.toUByte()
+		)
+	): PhysXShape
 
 	@VirtualFunction(31) abstract fun fTODO31() // createShape (PxTriangleMeshGeometry)
 	@VirtualFunction(30) abstract fun fTODO32() // createShape (PxTetrahedronMeshGeometry)

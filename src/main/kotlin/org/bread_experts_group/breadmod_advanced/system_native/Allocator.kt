@@ -1,11 +1,13 @@
 package org.bread_experts_group.breadmod_advanced.system_native
 
+import org.bread_experts_group.breadmod_advanced.system_native.AllocatorAnchor.cppAnalyze
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.int
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
 import org.bread_experts_group.ffi.autoArena
 import org.bread_experts_group.generic.Flaggable
-import java.lang.Boolean
+import java.io.File
 import java.lang.classfile.ClassFile
+import java.lang.classfile.Opcode
 import java.lang.classfile.TypeKind
 import java.lang.constant.ClassDesc
 import java.lang.constant.ConstantDescs
@@ -15,24 +17,8 @@ import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.lang.reflect.AccessFlag
+import java.lang.reflect.Constructor
 import java.lang.reflect.Method
-import kotlin.Any
-import kotlin.Array
-import kotlin.Byte
-import kotlin.Char
-import kotlin.Double
-import kotlin.Enum
-import kotlin.Float
-import kotlin.IllegalArgumentException
-import kotlin.Int
-import kotlin.Long
-import kotlin.Short
-import kotlin.String
-import kotlin.Suppress
-import kotlin.UByte
-import kotlin.UInt
-import kotlin.ULong
-import kotlin.UShort
 import kotlin.reflect.KCallable
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty
@@ -57,69 +43,6 @@ data class ObjectAnalysis<T : Any>(
 
 fun align(n: Long, to: Long): Long = ((n / to) + (if ((n % to) != 0L) 1 else 0)) * to
 
-fun <T : Any> cppAnalyze(
-	v: T
-): ObjectAnalysis<T> = when (v) {
-	is Byte, is UByte -> ObjectAnalysis(v, 1)
-	is Short, is UShort, is Char -> ObjectAnalysis(v, 2)
-	is Int, is UInt, is Float -> ObjectAnalysis(v, 4)
-	is Long, is ULong, is Double -> ObjectAnalysis(v, 8)
-	is Pointer<*>, is Array<*>, is MemorySegment, is MethodHandle -> ObjectAnalysis(v, `void*`.byteSize())
-	else if v::class.java.isEnum -> ObjectAnalysis(v, 4) // TODO: enum may be larger
-	else -> {
-		val classes = mutableListOf<Class<*>>()
-		var clazz: Class<*>? = v::class.java
-		while (clazz != null) {
-			classes.addFirst(clazz)
-			clazz = clazz.superclass
-		}
-		val fields = sortedMapOf<Long, KCallable<*>>()
-		val methods = sortedMapOf<Long, Method>()
-		var fieldsOffset = 0L
-		var methodsOffset = 0L
-		for (clazz in classes) {
-			val localFields = mutableMapOf<Long, KCallable<*>>()
-			for (field in clazz.kotlin.declaredMembers) {
-				val index = field.annotations.firstNotNullOfOrNull { it as? DefinedProperty }?.index ?: continue
-				val precursor = localFields.put(index, field)
-				if (precursor != null) throw IllegalArgumentException("$field @ $index already exists by $precursor")
-				if (index < 0) throw ArrayIndexOutOfBoundsException("$field @ $index must be >= 0")
-			}
-			for ((index, field) in localFields)
-				if (index > localFields.size) throw ArrayIndexOutOfBoundsException("$field @ $index > ${localFields.size}")
-			val localMethods = mutableMapOf<Long, Method>()
-			for (method in clazz.declaredMethods) {
-				val index = (method.getAnnotation(VirtualFunction::class.java)?.index ?: continue)
-				val precursor = localMethods.put(index, method)
-				if (precursor != null) throw IllegalArgumentException("$method @ $index already exists by $precursor")
-				if (index < 0) throw ArrayIndexOutOfBoundsException("$method @ $index must be >= 0")
-			}
-			for ((index, method) in localMethods)
-				if (index > localMethods.size) throw ArrayIndexOutOfBoundsException("$method @ $index > ${localMethods.size}")
-			for ((index, field) in localFields) fields[index + fieldsOffset] = field
-			for ((index, method) in localMethods) methods[index + methodsOffset] = method
-			fieldsOffset += localFields.size
-			methodsOffset += localMethods.size
-		}
-
-		var alignment = 0L
-		var offset = if (methods.isNotEmpty()) {
-			alignment = `void*`.byteAlignment()
-			`void*`.byteSize()
-		} else 0L
-		val properties = mutableMapOf<Long, ObjectAnalysis<*>>()
-		for ((_, field) in fields) {
-			val value = field.call(v) ?: throw IllegalArgumentException("Property $field can not be null")
-			val analysis = cppAnalyze(value)
-			if (analysis.alignment > alignment) alignment = analysis.alignment
-			offset = align(offset, analysis.alignment)
-			properties[offset] = analysis
-			offset += analysis.size
-		}
-		ObjectAnalysis(v, methods.values, properties, offset, alignment)
-	}
-}
-
 @Suppress("unused")
 object AllocatorAnchor {
 	@JvmStatic
@@ -130,6 +53,73 @@ object AllocatorAnchor {
 
 	@JvmStatic
 	fun <T> image(clazz: Class<T>, linker: Linker, segment: MemorySegment): T = clazz.image(linker, segment)
+
+	@JvmStatic
+	fun <T : Any> cppAnalyze(
+		v: T
+	): ObjectAnalysis<T> = when (v) {
+		is Byte, is UByte -> ObjectAnalysis(v, 1)
+		is Short, is UShort, is Char -> ObjectAnalysis(v, 2)
+		is Int, is UInt, is Float -> ObjectAnalysis(v, 4)
+		is Long, is ULong, is Double -> ObjectAnalysis(v, 8)
+		is Pointer<*>, is Array<*>, is MemorySegment, is MethodHandle -> ObjectAnalysis(v, `void*`.byteSize())
+		else if v::class.java.isEnum -> ObjectAnalysis(v, 4) // TODO: enum may be larger
+		else -> {
+			val classes = mutableListOf<Class<*>>()
+			var clazz: Class<*>? = v::class.java
+			while (clazz != null) {
+				classes.addFirst(clazz)
+				clazz = clazz.superclass
+			}
+			val fields = sortedMapOf<Long, KCallable<*>>()
+			val methods = sortedMapOf<Long, Method>()
+			var fieldsOffset = 0L
+			var methodsOffset = 0L
+			for (clazz in classes) {
+				val localFields = mutableMapOf<Long, KCallable<*>>()
+				for (field in clazz.kotlin.declaredMembers) {
+					val index = field.annotations.firstNotNullOfOrNull { it as? DefinedProperty }?.index ?: continue
+					val precursor = localFields.put(index, field)
+					if (precursor != null) throw IllegalArgumentException("$field @ $index already exists by $precursor")
+					if (index < 0) throw ArrayIndexOutOfBoundsException("$field @ $index must be >= 0")
+				}
+				for ((index, field) in localFields)
+					if (index > localFields.size) throw ArrayIndexOutOfBoundsException("$field @ $index > ${localFields.size}")
+				val localMethods = mutableMapOf<Long, Method>()
+				for (method in clazz.declaredMethods) {
+					val index = (method.getAnnotation(VirtualFunction::class.java)?.index ?: continue)
+					val precursor = localMethods.put(index, method)
+					if (precursor != null) throw IllegalArgumentException("$method @ $index already exists by $precursor")
+					if (index < 0) throw ArrayIndexOutOfBoundsException("$method @ $index must be >= 0")
+				}
+				for ((index, method) in localMethods)
+					if (index > localMethods.size) throw ArrayIndexOutOfBoundsException("$method @ $index > ${localMethods.size}")
+				for ((index, field) in localFields) fields[index + fieldsOffset] = field
+				for ((index, method) in localMethods) methods[index + methodsOffset] = method
+				fieldsOffset += localFields.size
+				methodsOffset += localMethods.size
+			}
+
+			var alignment = 0L
+			var offset = if (methods.isNotEmpty()) {
+				alignment = `void*`.byteAlignment()
+				`void*`.byteSize()
+			} else 0L
+			val properties = mutableMapOf<Long, ObjectAnalysis<*>>()
+			for ((_, field) in fields) {
+				val value = field.call(v) ?: throw IllegalArgumentException("Property $field can not be null")
+				val analysis = cppAnalyze(value)
+				if (analysis.alignment > alignment) alignment = analysis.alignment
+				offset = align(offset, analysis.alignment)
+				properties[offset] = analysis
+				offset += analysis.size
+			}
+			ObjectAnalysis(v, methods.values, properties, offset, alignment)
+		}
+	}
+
+	@JvmStatic
+	fun allocate(analysis: ObjectAnalysis<*>, arena: Arena, linker: Linker): MemorySegment = analysis.allocate(arena, linker)
 }
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
@@ -141,10 +131,13 @@ val Class<*>.layout: MemoryLayout
 		Int::class.java, Integer::class.java -> ValueLayout.JAVA_INT
 		Short::class.java, java.lang.Short::class.java -> ValueLayout.JAVA_SHORT
 		Byte::class.java, java.lang.Byte::class.java -> ValueLayout.JAVA_BYTE
-		Boolean::class.java -> ValueLayout.JAVA_BOOLEAN
+		Boolean::class.java, java.lang.Boolean::class.java -> ValueLayout.JAVA_BOOLEAN
 		else if this.isEnum -> int // TODO: Could be another type if larger
 		else -> throw IllegalArgumentException("Unsupported type $this")
 	}
+
+val Class<*>.nativePrimitive: Boolean
+	get() = this.typeKind != TypeKind.REFERENCE || this.isEnum || this == MemorySegment::class.java
 
 fun composeUpcall(
 	arena: Arena, linker: Linker,
@@ -165,14 +158,14 @@ fun composeUpcall(
 							AllocatorAnchor::class.java, "selectFlag",
 							MethodType.methodType(
 								Flaggable::class.java,
-								Array<Flaggable>::class.java, java.lang.Long.TYPE
+								Array<Flaggable>::class.java, Long::class.java
 							)
 						),
 						0, parameter.enumConstants
 					),
 					MethodType.methodType(
 						parameter,
-						Integer.TYPE
+						Int::class.java
 					)
 				)
 			} else {
@@ -272,47 +265,51 @@ fun ObjectAnalysis<*>.allocate(
 val Class<*>.classDesc: ClassDesc
 	get() = when (this) {
 		Void.TYPE -> ConstantDescs.CD_void
-		Boolean.TYPE -> ConstantDescs.CD_boolean
-		java.lang.Byte.TYPE -> ConstantDescs.CD_byte
-		Character.TYPE -> ConstantDescs.CD_char
-		java.lang.Short.TYPE -> ConstantDescs.CD_short
-		Integer.TYPE -> ConstantDescs.CD_int
-		java.lang.Long.TYPE -> ConstantDescs.CD_long
-		java.lang.Float.TYPE -> ConstantDescs.CD_float
-		java.lang.Double.TYPE -> ConstantDescs.CD_double
+		Boolean::class.java -> ConstantDescs.CD_boolean
+		Byte::class.java -> ConstantDescs.CD_byte
+		Char::class.java -> ConstantDescs.CD_char
+		Short::class.java -> ConstantDescs.CD_short
+		Int::class.java -> ConstantDescs.CD_int
+		Long::class.java -> ConstantDescs.CD_long
+		Float::class.java -> ConstantDescs.CD_float
+		Double::class.java -> ConstantDescs.CD_double
 		else -> ClassDesc.ofInternalName(this.name.replace('.', '/'))
 	}
 
 val Class<*>.boxedClassDesc: ClassDesc
 	get() = when (this) {
 		Void.TYPE -> ConstantDescs.CD_Void
-		Boolean.TYPE -> ConstantDescs.CD_Boolean
-		java.lang.Byte.TYPE -> ConstantDescs.CD_Byte
-		Character.TYPE -> ConstantDescs.CD_Character
-		java.lang.Short.TYPE -> ConstantDescs.CD_Short
-		Integer.TYPE -> ConstantDescs.CD_Integer
-		java.lang.Long.TYPE -> ConstantDescs.CD_Long
-		java.lang.Float.TYPE -> ConstantDescs.CD_Float
-		java.lang.Double.TYPE -> ConstantDescs.CD_Double
+		Boolean::class.java -> ConstantDescs.CD_Boolean
+		Byte::class.java -> ConstantDescs.CD_Byte
+		Char::class.java -> ConstantDescs.CD_Character
+		Short::class.java -> ConstantDescs.CD_Short
+		Int::class.java -> ConstantDescs.CD_Integer
+		Long::class.java -> ConstantDescs.CD_Long
+		Float::class.java -> ConstantDescs.CD_Float
+		Double::class.java -> ConstantDescs.CD_Double
 		else -> ClassDesc.ofInternalName(this.name.replace('.', '/'))
 	}
 
 val Class<*>.typeKind: TypeKind
 	get() = when (this) {
 		Void.TYPE -> TypeKind.VOID
-		Boolean.TYPE -> TypeKind.BOOLEAN
-		java.lang.Byte.TYPE -> TypeKind.BYTE
-		Character.TYPE -> TypeKind.CHAR
-		java.lang.Short.TYPE -> TypeKind.SHORT
-		Integer.TYPE -> TypeKind.INT
-		java.lang.Long.TYPE -> TypeKind.LONG
-		java.lang.Float.TYPE -> TypeKind.FLOAT
-		java.lang.Double.TYPE -> TypeKind.DOUBLE
+		Boolean::class.java -> TypeKind.BOOLEAN
+		Byte::class.java -> TypeKind.BYTE
+		Char::class.java -> TypeKind.CHAR
+		Short::class.java -> TypeKind.SHORT
+		Int::class.java -> TypeKind.INT
+		Long::class.java -> TypeKind.LONG
+		Float::class.java -> TypeKind.FLOAT
+		Double::class.java -> TypeKind.DOUBLE
 		else -> TypeKind.REFERENCE
 	}
 
-private var i = 0uL
+private val imagingCache = mutableMapOf<Class<*>, Constructor<*>>()
+@Suppress("UNCHECKED_CAST")
 fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
+	val cached = imagingCache[this]
+	if (cached != null) return cached.newInstance(segment, linker) as T
+
 	val implementingMethods = sortedMapOf<Long, Method>()
 	val implementingProperties = sortedMapOf<Long, KProperty<*>>()
 	val toImplement = mutableSetOf<String>()
@@ -366,15 +363,32 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 	}
 
 	val cf = ClassFile.of()
-	val className = "hidden$${this.simpleName}$${i++}"
+	val className = "hidden$${this.name.substringAfterLast('.')}"
 	val lThis = ClassDesc.of(this.packageName, className)
 	val lSuper = ClassDesc.of(this.name)
 	val data = cf.build(lThis) { builder ->
 		builder.withSuperclass(lSuper)
+		builder.withInterfaceSymbols(SegmentExposed::class.java.classDesc)
+		builder.withFlags(
+			AccessFlag.PUBLIC,
+			AccessFlag.FINAL
+		)
 		builder.withField(
 			"segment", MemorySegment::class.java.classDesc,
 			AccessFlag.PRIVATE.mask() or AccessFlag.FINAL.mask()
 		)
+		builder.withMethodBody(
+			"getSegment", MethodTypeDesc.of(MemorySegment::class.java.classDesc),
+			AccessFlag.PUBLIC.mask()
+		) { codeBuilder ->
+			codeBuilder
+				.aload(0)
+				.getfield(
+					lThis, "segment",
+					MemorySegment::class.java.classDesc
+				)
+				.areturn()
+		}
 		builder.withField(
 			"linker", Linker::class.java.classDesc,
 			AccessFlag.PRIVATE.mask() or AccessFlag.FINAL.mask()
@@ -468,11 +482,7 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 						)
 
 					if (implement.returnType != Void.TYPE) {
-						if (
-							implement.returnType.typeKind != TypeKind.REFERENCE ||
-							implement.returnType.isEnum ||
-							implement.returnType == MemorySegment::class.java
-						) codeBuilder
+						if (implement.returnType.nativePrimitive) codeBuilder
 							.ldc(codeBuilder.constantPool().classEntry(implement.returnType.boxedClassDesc))
 							.invokestatic(
 								AllocatorAnchor::class.java.classDesc, "layout",
@@ -480,10 +490,11 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 									MemoryLayout::class.java.classDesc,
 									ConstantDescs.CD_Class
 								)
-							) else codeBuilder.getstatic(
-							ValueLayout::class.java.classDesc, "ADDRESS",
-							AddressLayout::class.java.classDesc
-						)
+							) else codeBuilder
+								.getstatic(
+								ValueLayout::class.java.classDesc, "ADDRESS",
+								AddressLayout::class.java.classDesc
+							)
 					}
 
 					val parameters = implement.parameterTypes.toMutableList()
@@ -496,6 +507,7 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 						codeBuilder
 							.dup()
 							.loadConstant(i++)
+						if (parameter.nativePrimitive) codeBuilder
 							.ldc(codeBuilder.constantPool().classEntry(parameter.boxedClassDesc))
 							.invokestatic(
 								AllocatorAnchor::class.java.classDesc, "layout",
@@ -503,8 +515,12 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 									MemoryLayout::class.java.classDesc,
 									ConstantDescs.CD_Class
 								)
+							) else codeBuilder
+							.getstatic(
+								ValueLayout::class.java.classDesc, "ADDRESS",
+								AddressLayout::class.java.classDesc
 							)
-							.aastore()
+						codeBuilder.aastore()
 					}
 
 					if (implement.returnType == Void.TYPE) {
@@ -548,10 +564,7 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 			codeBuilder.return_()
 		}
 		for ((index, implement) in implementingMethods) {
-			val imageSegment =
-				!(implement.returnType.typeKind != TypeKind.REFERENCE ||
-					implement.returnType.isEnum ||
-					implement.returnType == MemorySegment::class.java)
+			val imageSegment = !implement.returnType.nativePrimitive
 			val desc = MethodTypeDesc.of(
 				implement.returnType.classDesc,
 				*implement.parameterTypes.map { it.classDesc }.toTypedArray()
@@ -584,13 +597,66 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 						MemorySegment::class.java.classDesc
 					)
 				var i = 0
-				for (parameter in implement.parameterTypes) codeBuilder.loadLocal(parameter.typeKind, ++i)
+				for (parameter in implement.parameterTypes) {
+					codeBuilder.loadLocal(parameter.typeKind, ++i)
+					if (!parameter.nativePrimitive) {
+						codeBuilder
+							.dup()
+							.instanceOf(SegmentExposed::class.java.classDesc)
+							.block { blockFalse ->
+								blockFalse
+									.block { blockTrue ->
+										blockTrue
+											.branch(Opcode.IFEQ, blockTrue.endLabel())
+											.checkcast(SegmentExposed::class.java.classDesc)
+											.invokeinterface(
+												SegmentExposed::class.java.classDesc, "getSegment",
+												MethodTypeDesc.of(MemorySegment::class.java.classDesc)
+											)
+											.goto_(blockFalse.endLabel())
+									}
+									.invokestatic(
+										AllocatorAnchor::class.java.classDesc, "cppAnalyze",
+										MethodTypeDesc.of(
+											ObjectAnalysis::class.java.classDesc,
+											ConstantDescs.CD_Object
+										)
+									)
+									.invokestatic(
+										Arena::class.java.classDesc, "global",
+										MethodTypeDesc.of(
+											Arena::class.java.classDesc
+										), // TODO!!!! DONT USE GLOBAL USE TEMP CONFINED
+										true
+									)
+									.aload(0)
+									.getfield(
+										lThis, "linker",
+										Linker::class.java.classDesc
+									)
+									.invokestatic(
+										AllocatorAnchor::class.java.classDesc, "allocate",
+										MethodTypeDesc.of(
+											MemorySegment::class.java.classDesc,
+											ObjectAnalysis::class.java.classDesc,
+											Arena::class.java.classDesc,
+											Linker::class.java.classDesc
+										)
+									)
+							}
+					}
+				}
 				codeBuilder.invokevirtual(
 					ConstantDescs.CD_MethodHandle, "invokeExact",
 					MethodTypeDesc.of(
 						if (imageSegment) MemorySegment::class.java.classDesc else desc.returnType(),
 						MemorySegment::class.java.classDesc,
-						*desc.parameterArray()
+						*desc.parameterList()
+							.map {
+								if (
+									it.isClassOrInterface && it != MemorySegment::class.java.classDesc
+								) MemorySegment::class.java.classDesc else it
+							}.toTypedArray()
 					)
 				)
 				if (imageSegment) {
@@ -627,11 +693,32 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 				val layoutType: Class<*>
 				val layoutName: String
 				when (val type = jG.returnType) {
+					MemorySegment::class.java -> {
+						size = AddressLayout.ADDRESS.byteSize()
+						layout = AddressLayout::class.java
+						layoutType = MemorySegment::class.java
+						layoutName = "ADDRESS"
+					}
+
 					Float::class.java -> {
-						size = 4
+						size = ValueLayout.JAVA_FLOAT.byteSize()
 						layout = ValueLayout.OfFloat::class.java
 						layoutType = Float::class.java
 						layoutName = "JAVA_FLOAT"
+					}
+
+					Int::class.java -> {
+						size = ValueLayout.JAVA_INT.byteSize()
+						layout = ValueLayout.OfInt::class.java
+						layoutType = Int::class.java
+						layoutName = "JAVA_INT"
+					}
+
+					Short::class.java -> {
+						size = ValueLayout.JAVA_SHORT.byteSize()
+						layout = ValueLayout.OfShort::class.java
+						layoutType = Short::class.java
+						layoutName = "JAVA_SHORT"
 					}
 
 					else -> throw IllegalArgumentException("Unsupported type $type")
@@ -668,8 +755,9 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 			}
 		}
 	}
-//	Files.write(data, File("./$className.class"))
+	File("./$className.class").writeBytes(data)
 	val hidden = MethodHandles.lookup().defineClass(data)
 	@Suppress("UNCHECKED_CAST")
+	imagingCache[this] = hidden.constructors.first()
 	return hidden.constructors.first().newInstance(segment, linker) as T
 }

@@ -28,51 +28,35 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
-import org.bread_experts_group.breadmod_advanced.system_native.PhysXQuatT.ReadWrite.Companion.PxIdentityD
-import org.bread_experts_group.breadmod_advanced.system_native.PhysXQuatT.ReadWrite.Companion.PxIdentityF
-
 /**
- * class representing a rigid euclidean transform as a quaternion and a vector
+ * A class representing the geometry of a sphere.
+ *
+ * Spheres are defined by their radius.
+ *
+ * *The scaling of the sphere is expected to be baked into this value, there is no additional scaling parameter.*
  *
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-abstract class PhysXTransformT<T : Any> {
-	abstract val q: PhysXQuatT<T>
-	abstract val p: PhysXVec3T<T>
+abstract class PhysXSphereGeometry : PhysXGeometry() {
+	@DefinedProperty(0) override val mType: PxGeometryType = PxGeometryType.eSPHERE
+	@DefinedProperty(1) override val mTypePadding: Float = 0f
 
 	/**
-	 * Transform transform to parent (returns compound transform: first src, then *this)
+	 * The radius of the sphere.
 	 *
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	fun transform(src: PhysXTransformT<T>): ReadWrite<T> {
-		// src = [srct, srcr] -> [r*srct + t, r*srcr]
-		return ReadWrite(q.rotate(src.p) + p, q * src.q)
+	abstract val radius: PxReal_t
+
+	abstract class ReadOnly : PhysXSphereGeometry() {
+		@DefinedProperty(0) abstract override val radius: PxReal_t
 	}
 
-	abstract class ReadOnly<T : Any> : PhysXTransformT<T>() {
-		@DefinedProperty(0) abstract override val q: PhysXQuatT<T>
-		@DefinedProperty(1) abstract override val p: PhysXVec3T<T>
-	}
-
-	open class ReadWrite<T : Any>(
-		@DefinedProperty(0) override var q: PhysXQuatT<T>,
-		@DefinedProperty(1) override var p: PhysXVec3T<T>
-	) : PhysXTransformT<T>() {
-		@Suppress("UNCHECKED_CAST")
-		constructor(position: PhysXVec3T<T>) : this(
-			when (position.x) {
-				is Float -> PxIdentityF
-				is Double -> PxIdentityD
-				else -> throw IllegalArgumentException("Unsupported type ... ${position.x::class}")
-			} as PhysXQuatT<T>,
-			position
-		)
-
-		constructor(p0: PhysXVec3T<T>, q0: PhysXQuatT<T>) : this(q0, p0)
-	}
+	open class ReadWrite(
+		@DefinedProperty(0) override val radius: PxReal_t
+	) : PhysXSphereGeometry()
 }

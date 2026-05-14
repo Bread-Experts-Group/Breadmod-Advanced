@@ -28,51 +28,42 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
-import org.bread_experts_group.breadmod_advanced.system_native.PhysXQuatT.ReadWrite.Companion.PxIdentityD
-import org.bread_experts_group.breadmod_advanced.system_native.PhysXQuatT.ReadWrite.Companion.PxIdentityF
+import org.bread_experts_group.generic.Flaggable
 
 /**
- * class representing a rigid euclidean transform as a quaternion and a vector
+ * Container for bitfield flag variables associated with a specific enum type.
+ *
+ * This allows for type safe manipulation for bitfields.
+ *
+ * ### Example
+ * ```
+ *     // enum that defines each bit...
+ *     struct MyEnum
+ *     {
+ *         enum Enum
+ *         {
+ *             eMAN  = 1,
+ *             eBEAR = 2,
+ *             ePIG  = 4,
+ *         };
+ *     };
+ *
+ *     // implements some convenient global operators.
+ *     PX_FLAGS_OPERATORS(MyEnum::Enum, PxU8);
+ *
+ *     PxFlags<MyEnum::Enum, PxU8> myFlags;
+ *     myFlags |= MyEnum::eMAN;
+ *     myFlags |= MyEnum::eBEAR | MyEnum::ePIG;
+ *     if(myFlags & MyEnum::eBEAR)
+ *     {
+ *         doSomething();
+ *     }
+ * ```
  *
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  * @since In accordance with PhysX 5.6.1
  */
-abstract class PhysXTransformT<T : Any> {
-	abstract val q: PhysXQuatT<T>
-	abstract val p: PhysXVec3T<T>
-
-	/**
-	 * Transform transform to parent (returns compound transform: first src, then *this)
-	 *
-	 * @author Miko Elbrecht (Kotlin)
-	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
-	 * @since In accordance with PhysX 5.6.1
-	 */
-	fun transform(src: PhysXTransformT<T>): ReadWrite<T> {
-		// src = [srct, srcr] -> [r*srct + t, r*srcr]
-		return ReadWrite(q.rotate(src.p) + p, q * src.q)
-	}
-
-	abstract class ReadOnly<T : Any> : PhysXTransformT<T>() {
-		@DefinedProperty(0) abstract override val q: PhysXQuatT<T>
-		@DefinedProperty(1) abstract override val p: PhysXVec3T<T>
-	}
-
-	open class ReadWrite<T : Any>(
-		@DefinedProperty(0) override var q: PhysXQuatT<T>,
-		@DefinedProperty(1) override var p: PhysXVec3T<T>
-	) : PhysXTransformT<T>() {
-		@Suppress("UNCHECKED_CAST")
-		constructor(position: PhysXVec3T<T>) : this(
-			when (position.x) {
-				is Float -> PxIdentityF
-				is Double -> PxIdentityD
-				else -> throw IllegalArgumentException("Unsupported type ... ${position.x::class}")
-			} as PhysXQuatT<T>,
-			position
-		)
-
-		constructor(p0: PhysXVec3T<T>, q0: PhysXQuatT<T>) : this(q0, p0)
-	}
+abstract class PxFlags<E : Flaggable, T : Any>(val enumClass: Class<E>) {
+	abstract val mBits: T
 }

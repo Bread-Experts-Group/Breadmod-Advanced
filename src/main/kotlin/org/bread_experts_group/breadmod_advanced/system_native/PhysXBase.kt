@@ -28,66 +28,88 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
+import java.lang.foreign.MemorySegment
+
 /**
- * Representation of a plane.
+ * Base class for objects that can be members of a [PhysXCollection].
  *
- *  Plane equation used: n.dot(v) + d = 0
+ * All [PhysXBase] sub-classes can be serialized.
  *
- * @since In accordance with PhysX 5.6.1
+ * @see PhysXCollection
+ *
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+ * @since In accordance with PhysX 5.6.1
  */
-sealed class PhysXPlane {
+abstract class PhysXBase {
 	/**
-	 * The normal to the plane
+	 * Releases the PxBase instance, please check documentation of release in derived class.
 	 *
-	 * @since In accordance with PhysX 5.6.1
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
 	 */
-	abstract val n: PxVec3_t
+	@VirtualFunction(0) abstract fun release()
 
 	/**
-	 * The distance from the origin
+	 * Returns string name of dynamic type.
+	 * @return Class name of most derived type of this object.
 	 *
-	 * @since In accordance with PhysX 5.6.1
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
 	 */
-	abstract val d: Float
+	@VirtualFunction(1) abstract fun getConcreteTypeName(): MemorySegment
 
 	/**
-	 * equivalent plane with unit normal
+	 * Whether the object is subordinate.
 	 *
-	 * @since In accordance with PhysX 5.6.1
+	 * A class is subordinate, if it can only be instantiated in the context of another class.
+	 *
+	 * @return	Whether the class is subordinate
+	 *
+	 * @see PhysXSerialization.isSerializable
+	 *
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
 	 */
-	fun normalize(): ReadWrite {
-		val denom = 1f / n.magnitude()
-		return ReadWrite(this.n * denom, this.d * denom)
-	}
+	@VirtualFunction(2) abstract fun isReleasable(): Boolean
 
 	/**
-	 * equivalent plane with unit normal (mutating)
+	 * Destructor.
 	 *
-	 * @since In accordance with PhysX 5.6.1
 	 * @author Miko Elbrecht (Kotlin)
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
 	 */
-	fun ReadWrite.normalizeMut() {
-		val denom = 1f / n.magnitude()
-		this.n *= denom
-		this.d *= denom
-	}
+	@VirtualFunction(3) abstract fun destructor()
 
-	abstract class ReadOnly : PhysXPlane() {
-		@DefinedProperty(0) abstract override val n: PxVec3_t
-		@DefinedProperty(1) abstract override val d: Float
-	}
+	/**
+	 * Returns whether a given type name matches with the type of this instance
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	@VirtualFunction(4) abstract fun isKindOf(superClass: MemorySegment): Boolean
 
-	open class ReadWrite(
-		@DefinedProperty(0) override var n: PxVec3_t = PhysXVec3T.ReadWrite(0f, 0f, 0f),
-		@DefinedProperty(1) override var d: Float = 0f
-	) : PhysXPlane()
+	/**
+	 * concrete type identifier - see [PxConcreteType].
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	@DefinedProperty(0) abstract val mConcreteType: PxU16_t // TODO: PxType
+
+	/**
+	 * internal flags
+	 *
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 * @since In accordance with PhysX 5.6.1
+	 */
+	@DefinedProperty(1) abstract val mBaseFlags: PxU16_t // TODO: PxBaseFlags
+	@DefinedProperty(2) abstract val mBuiltInRefCount: PxU32_t
 }

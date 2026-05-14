@@ -28,16 +28,16 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
+import org.bread_experts_group.breadmod_advanced.system_native.AllocatorAnchor.cppAnalyze
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.bool
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.char
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.int
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.ptr
 import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
 import org.bread_experts_group.ffi.getDowncall
-import java.lang.foreign.Arena
-import java.lang.foreign.Linker
-import java.lang.foreign.MemorySegment
-import java.lang.foreign.SymbolLookup
+import org.bread_experts_group.ffi.globalArena
+import org.bread_experts_group.ffi.nativeLinker
+import java.lang.foreign.*
 import java.lang.invoke.MethodHandle
 
 class PhysXLibrary private constructor(
@@ -177,7 +177,7 @@ class PhysXLibrary private constructor(
 		trackOutstandingAllocations: Boolean = false,
 		pvd: PhysXPvd? = null,
 		omniPvd: PhysXOmniPvd? = null
-	): MemorySegment? {
+	): PhysXPhysics? {
 		val physics = pxCreatePhysics.invokeExact(
 			version.toInt(),
 			foundation.segment,
@@ -187,7 +187,7 @@ class PhysXLibrary private constructor(
 			omniPvd?.segment ?: MemorySegment.NULL
 		) as MemorySegment
 		if (physics == MemorySegment.NULL) return null
-		return physics
+		return PhysXPhysics::class.java.image(nativeLinker, physics)
 	}
 
 	/**
@@ -332,6 +332,7 @@ class PhysXLibrary private constructor(
 	 * @see PxSetGroup
 	 */
 	fun pxDefaultSimulationFilterShader(
+		returnInto: MemorySegment,
 		attributes0: Int,
 		filterData0: MemorySegment,
 		attributes1: Int,
@@ -339,7 +340,16 @@ class PhysXLibrary private constructor(
 		pairFlags: MemorySegment,
 		constantBlock: MemorySegment,
 		constantBlockSize: Int
-	): Short {
-		TODO("Ah")
+	): MemorySegment {
+		val flags = pxDefaultSimulationFilterShader.invokeExact(
+			attributes0, filterData0,
+			attributes1, filterData1,
+			pairFlags,
+			constantBlock, constantBlockSize
+		) as Short
+		val flagsPtr = globalArena.allocate(ValueLayout.JAVA_SHORT)
+		flagsPtr.set(ValueLayout.JAVA_SHORT, 0, flags)
+//		returnInto.reinterpret(Long.MAX_VALUE).set(ValueLayout.ADDRESS, 0, flagsPtr)
+		return flagsPtr
 	}
 }

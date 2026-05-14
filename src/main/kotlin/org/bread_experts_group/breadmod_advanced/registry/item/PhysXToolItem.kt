@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager
 import org.bread_experts_group.api.system.device.SystemDeviceFeatures
 import org.bread_experts_group.breadmod.registry.item.IMouseItem
 import org.bread_experts_group.breadmod_advanced.system_native.*
+import org.bread_experts_group.breadmod_advanced.system_native.PhysXQuatT.ReadWrite.Companion.PxIdentityF
 import org.bread_experts_group.breadmod_advanced.system_native.PxPhysicsVersion.PX_PHYSICS_VERSION
 import org.bread_experts_group.ffi.autoArena
 import org.bread_experts_group.ffi.getLookup
@@ -68,11 +69,10 @@ class PhysXToolItem : Item(Properties().stacksTo(1).rarity(Rarity.UNCOMMON)), IM
 		if (pvd.connect(globalArena, transport, FlagSet.of(*PxPvdInstrumentationFlag.entries.toTypedArray()))) {
 			logger.info("PVD Connected")
 		}
-		val physicsPtr = physxLibrary.pxCreatePhysics(
+		val physics = physxLibrary.pxCreatePhysics(
 			globalArena,
 			PX_PHYSICS_VERSION, foundation, PhysXTolerancesScale.ReadWrite(), true, pvd
 		)!!
-		val physics = PhysXPhysics::class.java.image(nativeLinker, physicsPtr)
 		val dispatcher = physxLibrary.pxDefaultCpuDispatcherCreate(globalArena, 4u)
 		val cuda = physxLibrary.pxCreateCudaContextManager(globalArena, foundation, PhysXCudaContextManagerDesc())
 		val sceneDesc = PhysXSceneDesc(physics.getTolerancesScale())
@@ -80,7 +80,8 @@ class PhysXToolItem : Item(Properties().stacksTo(1).rarity(Rarity.UNCOMMON)), IM
 			physxLibrary,
 			"pxDefaultSimulationFilterShader",
 			MethodType.methodType(
-				Short::class.java,
+				MemorySegment::class.java,
+				MemorySegment::class.java,
 				Int::class.java, MemorySegment::class.java,
 				Int::class.java, MemorySegment::class.java,
 				MemorySegment::class.java,
@@ -89,68 +90,86 @@ class PhysXToolItem : Item(Properties().stacksTo(1).rarity(Rarity.UNCOMMON)), IM
 		)
 		sceneDesc.cpuDispatcher = Pointer(dispatcher)
 		sceneDesc.cudaContextManager = Pointer(cuda)
-		sceneDesc.gravity = PxVec3_t(0f, -9.81f, 0f)
+		sceneDesc.gravity = PhysXVec3T.ReadWrite(0f, -9.81f, 0f)
 		sceneDesc.flags = FlagSet.of(
 			PxSceneFlag.eENABLE_GPU_DYNAMICS,
 			PxSceneFlag.eENABLE_PCM,
 			PxSceneFlag.eENABLE_STABILIZATION
 		).maskI.toUInt()
 		sceneDesc.broadPhaseType = PxBroadPhaseType.eGPU
-		val scene = PhysXScene::class.java.image(
-			nativeLinker,
-			physics.createScene(
-				cppAnalyze(sceneDesc).allocate(globalArena, nativeLinker)
-			)
-		)
+		val scene = physics.createScene(sceneDesc)
 		val materialPtr = physics.createMaterial(0.5f, 0.5f, 0.6f)
-		val groundPlane = physxLibrary.pxCreatePlane(
-			physicsPtr,
-			cppAnalyze(
-				PhysXPlane.ReadWrite(
-					PxVec3_t(0f, 1f, 0f),
-					0f
-				)
-			).allocate(globalArena, nativeLinker),
+		val groundPlane = PxCreatePlane(
+			physics,
+			PhysXPlane.ReadWrite(
+				PhysXVec3T.ReadWrite(0f, 1f, 0f)
+			),
 			materialPtr
-		)!!
+		)
 		scene.addActor(groundPlane)
-		repeat(40) {
+		var stackZ = 10f
+		repeat(1) {
+			println("${it + 1} / 40")
 			val halfExtent = 1f
 			val size = 20
 			val materials = autoArena.allocate(ValueLayout.ADDRESS)
 			materials.set(ValueLayout.ADDRESS, 0, materialPtr)
-			val flags = autoArena.allocate(1)
-			flags.set(ValueLayout.JAVA_BYTE, 0, FlagSet.of(
-				PxShapeFlag.eVISUALIZATION,
-				PxShapeFlag.eSCENE_QUERY_SHAPE,
-				PxShapeFlag.eSIMULATION_SHAPE
-			).maskB)
-			val shapePtr = physics.createShape(
-				cppAnalyze(
-					PhysXBoxGeometry.ReadWrite(
-						PxVec3_t(halfExtent, halfExtent, halfExtent)
-					)
-				).allocate(globalArena, nativeLinker),
+			val shape = physics.createShape(
+				PhysXBoxGeometry.ReadWrite(
+					PhysXVec3T.ReadWrite(halfExtent, halfExtent, halfExtent)
+				),
 				materials,
-				1u,
-				shapeFlags = flags
+				1u
 			)
-			println(shapePtr)
+			val t = PhysXTransformT.ReadWrite(
+				PxIdentityF,
+				PhysXVec3T.ReadWrite(0f, 0f, stackZ)
+			)
+			stackZ -= 10f
 			repeat(size) { i ->
 				repeat(size - i) { j ->
-					// t PxTransform(PxVec3(0,0,stackZ-=10.0f)), size 20, 1.0f
-					// PxTransform localTm(PxVec3(PxReal(j*2) - PxReal(size-i), PxReal(i*2+1), 0) * halfExtent);
-//					val bodyPtr = physics.createRigidDynamic(t.transform(localTm))
-//					body->attachShape(*shape);
-//					PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
-//					gScene->addActor(*body);
+					val localTm = PhysXTransformT.ReadWrite(
+						PhysXVec3T.ReadWrite(
+							(j * 2f) - (size-i),
+							(i * 2f + 1f),
+							0f
+						) * halfExtent
+					)
+					val body = physics.createRigidDynamic(t.transform(localTm))
+					body.attachShape(shape)
+//					updateMassAndInertia(body, 10)
+					scene.addActor(body)
 				}
 			}
-//			shape.release()
+			shape.release()
 		}
-		repeat(60) {
-			scene.simulate(1f / 60)
-			scene.fetchResults(true)
+
+		fun createDynamic(
+			t: PxTransform_t,
+			geometry: PhysXGeometry,
+			velocity: PxVec3_t = PhysXVec3T.ReadWrite(0f, 0f, 0f)
+		): PhysXRigidDynamic {
+			val dynamic = PxCreateDynamic(physics, t, geometry, materialPtr, 10f)
+			dynamic.setAngularDamping(0.5f)
+			dynamic.setLinearVelocity(velocity)
+			scene.addActor(dynamic)
+			return dynamic
+		}
+		val ball = createDynamic(
+			PhysXTransformT.ReadWrite(
+				PhysXVec3T.ReadWrite(0f, 20f, 100f)
+			),
+			PhysXSphereGeometry.ReadWrite(5f),
+			PhysXVec3T.ReadWrite(0f, -25f, -100f)
+		)
+		ball.setMass(5000f)
+		// updateMassAndInertia(ball, 1000f)
+
+		repeat(600) {
+			val a = scene.simulate(1f / 60)
+			println("$it: a $a")
+			val b = scene.fetchResults(true)
+			println("$it: b $b")
 			Thread.sleep(1000 / 60)
 		}
 		logger.info("Tearing down")

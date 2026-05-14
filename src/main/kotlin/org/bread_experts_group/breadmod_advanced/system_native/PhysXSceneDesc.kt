@@ -60,7 +60,7 @@ data class PhysXSceneDesc(
 	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
 	 * @since In accordance with PhysX 5.6.1
 	 */
-	@DefinedProperty(0) var gravity: PxVec3_t = PxVec3_t(0f, 0f, 0f),
+	@DefinedProperty(0) var gravity: PxVec3_t = PhysXVec3T.ReadWrite(0f, 0f, 0f),
 	/**
 	 * Possible notification callback.
 	 *
@@ -510,7 +510,7 @@ data class PhysXSceneDesc(
 	 *
 	 * **Range:** (0, PX_MAX_F32)
 	 *
-	 * @see PxRigidDynamic.wakeUp
+	 * @see PhysXRigidDynamic.wakeUp
 	 * @see PxArticulationReducedCoordinate.wakeUp
 	 * @see PhysXScene.getWakeCounterResetvarue
 	 *
@@ -532,8 +532,8 @@ data class PhysXSceneDesc(
 	 * @since In accordance with PhysX 5.6.1
 	 */
 	@DefinedProperty(35) var sanityBounds: PhysXBounds3 = PhysXBounds3(
-		PxVec3_t(-PX_MAX_BOUNDS_EXTENTS, -PX_MAX_BOUNDS_EXTENTS, -PX_MAX_BOUNDS_EXTENTS),
-		PxVec3_t(PX_MAX_BOUNDS_EXTENTS, PX_MAX_BOUNDS_EXTENTS, PX_MAX_BOUNDS_EXTENTS),
+		PhysXVec3T.ReadWrite(-PX_MAX_BOUNDS_EXTENTS, -PX_MAX_BOUNDS_EXTENTS, -PX_MAX_BOUNDS_EXTENTS),
+		PhysXVec3T.ReadWrite(PX_MAX_BOUNDS_EXTENTS, PX_MAX_BOUNDS_EXTENTS, PX_MAX_BOUNDS_EXTENTS),
 	),
 	/**
 	 * The pre-allocations performed in the GPU dynamics pipeline.
