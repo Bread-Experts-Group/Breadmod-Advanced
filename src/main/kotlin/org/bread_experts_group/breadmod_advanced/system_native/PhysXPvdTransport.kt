@@ -2,8 +2,4 @@ package org.bread_experts_group.breadmod_advanced.system_native
 
 import java.lang.foreign.MemorySegment
 
-class PhysXPvdTransport internal constructor(val segment: MemorySegment) {
-	init {
-		println("** $segment")
-	}
-}
+class PhysXPvdTransport internal constructor(val segment: MemorySegment)

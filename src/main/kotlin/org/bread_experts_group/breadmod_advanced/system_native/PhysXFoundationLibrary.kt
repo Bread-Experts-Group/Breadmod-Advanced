@@ -82,6 +82,6 @@ class PhysXFoundationLibrary private constructor(
 			cppAnalyze(errorCallback).allocate(arena, linker)
 		) as MemorySegment
 		if (segment == MemorySegment.NULL) return null
-		return PhysXFoundation(linker, segment)
+		return PhysXFoundation::class.java.image(linker, segment)
 	}
 }

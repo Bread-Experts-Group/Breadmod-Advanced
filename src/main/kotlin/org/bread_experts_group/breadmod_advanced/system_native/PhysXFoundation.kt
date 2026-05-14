@@ -28,13 +28,6 @@
 
 package org.bread_experts_group.breadmod_advanced.system_native
 
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.ptr
-import org.bread_experts_group.breadmod_advanced.system_native.CanonicalLayouts.`void*`
-import org.bread_experts_group.ffi.getDowncallVoid
-import java.lang.foreign.Linker
-import java.lang.foreign.MemorySegment
-import java.lang.invoke.MethodHandle
-
 /**
  * Foundation SDK singleton class.
 
@@ -43,22 +36,17 @@ import java.lang.invoke.MethodHandle
  * @author Miko Elbrecht (Kotlin)
  * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
  */
-class PhysXFoundation internal constructor(
-	linker: Linker,
-	internal val segment: MemorySegment
-) {
-	private val release: MethodHandle
-
-	init {
-		val vtable = segment.reinterpret(`void*`.byteSize()).get(`void*`, 0)
-			.reinterpret(`void*`.byteSize() * 14)
-		release = vtable.getAtIndex(`void*`, 0).getDowncallVoid(
-			linker,
-			PxFoundation.ptr.withName("self")
-		)
-	}
-
-	fun release() {
-		this.release.invokeExact(segment)
-	}
+abstract class PhysXFoundation {
+	/**
+	 * Destroys the instance it is called on.
+	 *
+	 * 	The operation will fail, if there are still modules referencing the foundation object. Release all dependent modules
+	 * 	prior to calling this method.
+	 *
+	 * @see PxCreateFoundation
+	 * @since In accordance with PhysX 5.6.1
+	 * @author Miko Elbrecht (Kotlin)
+	 * @author NVIDIA Corporation, AGEIA Technologies, Inc. NovodeX AG. (Library headers, documentation, see copyright notice)
+	 */
+	@VirtualFunction(0) abstract fun release()
 }

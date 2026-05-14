@@ -134,7 +134,7 @@ class PhysXLibrary private constructor(
 		launchSynchronous: Boolean = false
 	): PhysXCudaContextManager {
 		val ptr = pxCreateCudaContextManager.invokeExact(
-			foundation.segment,
+			(foundation as SegmentExposed).segment,
 			cppAnalyze(desc).allocate(arena, linker),
 			if (profilerCallback != null) TODO("!") else MemorySegment.NULL,
 			launchSynchronous
@@ -180,7 +180,7 @@ class PhysXLibrary private constructor(
 	): PhysXPhysics? {
 		val physics = pxCreatePhysics.invokeExact(
 			version.toInt(),
-			foundation.segment,
+			(foundation as SegmentExposed).segment,
 			cppAnalyze(scale).allocate(arena, linker),
 			trackOutstandingAllocations,
 			pvd?.segment ?: MemorySegment.NULL,
@@ -225,7 +225,7 @@ class PhysXLibrary private constructor(
 	 */
 	fun pxCreatePvd(foundation: PhysXFoundation): PhysXPvd = PhysXPvd(
 		linker,
-		pxCreatePvd.invokeExact(foundation.segment) as MemorySegment
+		pxCreatePvd.invokeExact((foundation as SegmentExposed).segment) as MemorySegment
 	)
 
 	/**

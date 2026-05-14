@@ -75,7 +75,7 @@ abstract class PhysXPhysics {
 	 * @see PhysXLibrary.pxCreatePhysics
 	 */
 	@VirtualFunction(1) abstract fun release()
-	@VirtualFunction(2) abstract fun fTODO2() // getFoundation
+	@VirtualFunction(2) abstract fun getFoundation(): PhysXFoundation
 	@VirtualFunction(3) abstract fun fTODO3() // getPhysicsInsertionCallback
 	@VirtualFunction(4) abstract fun fTODO4() // getOmniPvd
 

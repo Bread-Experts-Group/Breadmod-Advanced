@@ -623,7 +623,7 @@ fun <T> Class<T>.image(linker: Linker, segment: MemorySegment): T {
 										)
 									)
 									.invokestatic(
-										Arena::class.java.classDesc, "global",
+										Arena::class.java.classDesc, "ofConfined",
 										MethodTypeDesc.of(
 											Arena::class.java.classDesc
 										), // TODO!!!! DONT USE GLOBAL USE TEMP CONFINED

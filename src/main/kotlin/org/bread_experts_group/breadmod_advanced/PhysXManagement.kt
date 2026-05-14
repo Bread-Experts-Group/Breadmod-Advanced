@@ -1,0 +1,68 @@
+package org.bread_experts_group.breadmod_advanced
+
+import org.apache.logging.log4j.LogManager
+import org.bread_experts_group.api.system.device.SystemDeviceFeatures
+import org.bread_experts_group.breadmod_advanced.system_native.*
+import org.bread_experts_group.breadmod_advanced.system_native.PxPhysicsVersion.PX_PHYSICS_VERSION
+import org.bread_experts_group.ffi.getLookup
+import org.bread_experts_group.ffi.globalArena
+import org.bread_experts_group.ffi.nativeLinker
+import org.bread_experts_group.generic.FlagSet
+
+class PhysXManagement {
+	val foundationLibrary: PhysXFoundationLibrary
+	val physXLibrary: PhysXLibrary
+
+	val foundation: PhysXFoundation
+	val physics: PhysXPhysics
+
+	init {
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXGpu_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PVDRuntime_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXCommon_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+		globalArena.getLookup(
+			Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXCooking_64.dll")
+				.get(SystemDeviceFeatures.PATH).element
+		)!!
+
+		foundationLibrary = PhysXFoundationLibrary(
+			globalArena.getLookup(
+				Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysXFoundation_64.dll")
+					.get(SystemDeviceFeatures.PATH).element
+			)!!,
+			nativeLinker
+		)
+		physXLibrary = PhysXLibrary(
+			globalArena.getLookup(
+				Directories.physX.get(SystemDeviceFeatures.PATH_APPEND).append("PhysX_64.dll")
+					.get(SystemDeviceFeatures.PATH).element
+			)!!,
+			nativeLinker
+		)
+
+		foundation = foundationLibrary.pxCreateFoundation(
+			globalArena,
+			PX_PHYSICS_VERSION, PhysXAllocatorCallback.Standard,
+			PhysXErrorCallback.Standard(LogManager.getLogger("PhysX"))
+		)!!
+		val pvd = physXLibrary.pxCreatePvd(foundation)
+		// val transport = physxLibrary.pxDefaultPvdFileTransportCreate(globalArena, "TEST.pvd")
+		val transport = physXLibrary.pxDefaultPvdSocketTransportCreate(globalArena, "127.0.0.1", 5425, 10u)
+		if (pvd.connect(globalArena, transport, FlagSet.of(*PxPvdInstrumentationFlag.entries.toTypedArray()))) {
+			println("PVD Connected")
+		}
+		physics = physXLibrary.pxCreatePhysics(
+			globalArena,
+			PX_PHYSICS_VERSION, foundation, PhysXTolerancesScale.ReadWrite(), true, pvd
+		)!!
+	}
+}
