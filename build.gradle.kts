@@ -4,10 +4,10 @@ import net.neoforged.moddevgradle.dsl.RunModel
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-	kotlin("jvm") version "2.3.21"
+	kotlin("jvm") version "2.4.0"
 	id("org.jetbrains.dokka-javadoc") version "2.1.0"
 	id("idea")
-	id("net.neoforged.moddev") version "2.0.134"
+	id("net.neoforged.moddev") version "2.0.141"
 	`maven-publish`
 	`java-library`
 	signing
@@ -19,7 +19,7 @@ version = project.properties["mod_version"] as String
 private fun getModId(): String = project.properties["mod_id"] as String
 private fun mcVersion(): String = project.properties["minecraft_version"] as String
 
-private val breadServerLib: String = "org.bread_experts_group:bread_server_lib-code:D1F6N8P3"
+//private val breadServerLib: String = "org.bread_experts_group:bread_server_lib-code:D2F0N0P1"
 private val breadMod: String = "org.bread_experts_group:breadmod:1.6.1"
 private val upwards: String = "org.bread_experts_group:upwards:4"
 
@@ -116,9 +116,9 @@ neoForge {
 			)
 
 			logLevel = org.slf4j.event.Level.INFO
-			additionalRuntimeClasspathConfiguration.dependencies.add(
-				dependencies.create(breadServerLib) { isTransitive = false }
-			)
+//			additionalRuntimeClasspathConfiguration.dependencies.add(
+//				dependencies.create(breadServerLib) { isTransitive = false }
+//			)
 		}
 	}
 
@@ -137,7 +137,7 @@ configurations {
 
 dependencies {
 	// Mod Dependencies //
-	upwardsLibraries(implementation(breadServerLib) { isTransitive = false })
+//	upwardsLibraries(implementation(breadServerLib) { isTransitive = false })
 	implementation(upwards)
 	implementation(breadMod)
 	implementation(kotlin("reflect"))
